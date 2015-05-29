@@ -30,7 +30,7 @@ template <> const char *lux_Array<unsigned char>::Type::name = "uchar";
 template <> const char *lux_Array<unsigned short>::Type::name = "ushort";
 template <> const char *lux_Array<unsigned long>::Type::name = "ulong";
 
-int luxopen_array(lua_State *state)
+int lux_openarray(lua_State *state)
 {
 	lux_Array<int>::open(state);
 	lux_Array<char>::open(state);
@@ -132,7 +132,8 @@ template <> void lux_push<void*>(lua_State *state, void *value)
 }
 template <> void lux_push<std::string>(lua_State *state, std::string value)
 {
-	lua_pushstring(state, value.c_str());
+	const char *string = value.c_str();
+	lua_pushstring(state, string);
 }
 
 

@@ -4,14 +4,11 @@
 #include "lxalloc.hpp"
 #include "lxstack.hpp"
 
-
-int luxopen_array(lua_State *state);
-
+int lux_openarray(lua_State *state);
 
 template <class C> struct lux_Array
 {
 	typedef lux_Type<C*> Type;
-	typedef lux_User<C*> User;
 
 	static C &value(lua_State *state, int index, int offset)
 	{
@@ -93,6 +90,22 @@ template <class C> struct lux_Array
 		return 1;
 	}
 
+	static int __concat(lua_State *state)
+	{
+		auto user = lux_check<C*>(state, 2);
+		lua_pop(state, 1);
+
+		char string[user->size];
+		for (int it = 0; it < user->size; ++it)
+		{
+		 string[it] = static_cast<long>(user->data[it]) & 0x7F;
+		}
+
+		lua_pushlstring(state, string, user->size);
+		lua_concat(state, 2);
+		return 1;
+	}
+
 	static int __add(lua_State *state)
 	{
 		lux_push<C*>(state, &value(state, 1, 2));
@@ -122,6 +135,10 @@ template <class C> struct lux_Array
 		lua_pushcfunction(state, __index);
 		lua_settable(state, -3);
 
+		lua_pushliteral(state, "__concat");
+		lua_pushcfunction(state, __concat);
+		lua_settable(state, -3);
+
 		lua_pushliteral(state, "__add");
 		lua_pushcfunction(state, __add);
 		lua_settable(state, -3);
@@ -139,7 +156,6 @@ template <class C> struct lux_Array
 		return 0;
 	}
 };
-
 
 #endif // file
 

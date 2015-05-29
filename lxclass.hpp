@@ -7,7 +7,6 @@
 template <class C> struct lux_Class
 {
 	typedef lux_Type<C*> Type;
-	typedef lux_User<C*> User;
 
 	static int __new(lua_State  *state)
 	{
@@ -51,9 +50,9 @@ template <class C> struct lux_Class
 
 	static int __add(lua_State *state)
 	{
-		auto ptr = lux_to<C*>(state, 1);
-		ptrdiff_t diff = lua_tointeger(state, 2);
-		lux_push(state, ptr + diff);
+		auto address = lux_to<C*>(state, 1);
+		ptrdiff_t offset = luaL_checkint(state, 2);
+		lux_push(state, address + offset);
 		return 1;
 	}
 
@@ -103,7 +102,6 @@ template <class C> struct lux_Class
 
 	static void setfuncs(lua_State *state);
 };
-
 
 #endif // file
 

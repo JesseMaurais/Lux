@@ -7,11 +7,9 @@
 #include <string>
 #include <map>
 
-
 template <class C> struct lux_Union
 {
 	typedef lux_Type<C*> Type;
-	typedef lux_User<C*> User;
 
 	static int __new(lua_State *state)
 	{
@@ -93,6 +91,14 @@ template <class C> struct lux_Union
 		return 1;
 	}
 
+	static int __add(lua_State *state)
+	{
+		auto address = lux_to<C*>(state, 1);
+		ptrdiff_t offset = luaL_checkint(state, 2);
+		lux_push(state, address + offset);
+		return 1;
+	}
+
 	static int open(lua_State *state)
 	{
 		luaL_newmetatable(state, Type::name);
@@ -166,6 +172,9 @@ template <class C> struct lux_Union
 
 template <class C> std::map<std::string, lua_CFunction> lux_Union<C>::index;
 template <class C> std::map<std::string, lua_CFunction> lux_Union<C>::newindex;
+
+#define lux_set(C, x) lux_Union<C>::set<decltype(C::x), offsetof(C, x)>(#x)
+#define lux_get(C, x) lux_Union<C>::get<decltype(C::x), offsetof(C, x)>(#x)
 
 
 #endif // file

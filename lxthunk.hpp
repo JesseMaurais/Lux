@@ -66,7 +66,7 @@ template <typename Res, typename Obj, typename... Args>
 	}
  }
 
-#define lux_wrap(fun) [](lua_State *state)->int{return lux_thunk(state, &fun);}
+#define lux_wrap(fun) [](lua_State *L){return lux_thunk(L, &fun);}
 
 #define lux_cast(fun) static_cast<lua_CFunction>(lux_wrap(fun))
 

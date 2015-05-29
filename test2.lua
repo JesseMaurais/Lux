@@ -44,6 +44,8 @@ for i = 0, #d-1 do
 	print('d['..i..'] = '..string.char(d[i]))
 end
 
+print('Or like this: ' .. d)
+
 e = short{7, 10, 6, 14}
 
 print('object e is '..tostring(e))
