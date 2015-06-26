@@ -31,7 +31,7 @@ template <class C> struct lux_Class
 		return 1;
 	}
 
-	static int __delete(lua_State *state)
+	static int __gc(lua_State *state)
 	{
 		auto user = lux_check<C*>(state, 1);
 		if (user->size && user->data)
@@ -50,9 +50,17 @@ template <class C> struct lux_Class
 
 	static int __add(lua_State *state)
 	{
-		auto address = lux_to<C*>(state, 1);
-		ptrdiff_t offset = luaL_checkint(state, 2);
-		lux_push(state, address + offset);
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		lux_push(state, data + offset);
+		return 1;
+	}
+
+	static int __sub(lua_State *state)
+	{
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		lux_push(state, data + offset);
 		return 1;
 	}
 
@@ -77,7 +85,7 @@ template <class C> struct lux_Class
 		lua_pushliteral(state, "__index");
 		lua_pushvalue(state, tab);
 		lua_settable(state, meta);
-
+		
 		lua_pushliteral(state, "__tostring");
 		lua_pushcfunction(state, __tostring);
 		lua_settable(state, meta);
@@ -86,20 +94,27 @@ template <class C> struct lux_Class
 		lua_pushcfunction(state, __add);
 		lua_settable(state, meta);
 
+		lua_pushliteral(state, "__sub");
+		lua_pushcfunction(state, __sub);
+		lua_settable(state, meta);
+
 		lua_pushliteral(state, "__len");
 		lua_pushcfunction(state, __len);
 		lua_settable(state, meta);
 
 		lua_pushliteral(state, "__gc");
-		lua_pushcfunction(state, __delete);
+		lua_pushcfunction(state, __gc);
 		lua_settable(state, meta);
 
 		setfuncs(state);
-		lua_register(state, Type::name, __new);
 		lua_pop(state, 2);
+		lua_pushcfunction(state, __new);
+		lua_setglobal(state, Type::name);
+
 		return 0;
 	}
 
+	// implement these per specification
 	static void setfuncs(lua_State *state);
 };
 

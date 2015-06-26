@@ -2,7 +2,7 @@ print('test2: using C arrays for data storage')
 
 a = int(10)
 
-print('object a is '..type(a))
+print('object a is ' .. tostring(a))
 
 for i = 0, #a-1 do
 	a[i] = 2^i
@@ -43,8 +43,6 @@ print('object d is '..tostring(d))
 for i = 0, #d-1 do
 	print('d['..i..'] = '..string.char(d[i]))
 end
-
-print('Or like this: ' .. d)
 
 e = short{7, 10, 6, 14}
 

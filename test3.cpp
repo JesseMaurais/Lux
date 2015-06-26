@@ -1,5 +1,5 @@
-#include <sys/stat.h>
 #include "lux.hpp" 
+#include <cstdio>
 
 
 struct Record
@@ -12,14 +12,17 @@ struct Record
 };
 
 template <> const char *lux_Union<Record>::Type::name = "Record";
-
-template <> int lux_Union<Record>::setfuncs(lua_State *state)
+template <> luaL_Reg lux_Union<Record>::newindex[] =
 {
-	set<decltype(Record::word), offsetof(Record, word)>("word");
-	get<decltype(Record::byte), offsetof(Record, byte)>("byte");
-	set<decltype(Record::real), offsetof(Record, real)>("real");
-	get<decltype(Record::real), offsetof(Record, real)>("real");
-}
+	lux_newindex(Record, word),
+	lux_newindex(Record, real)
+};
+template <> luaL_Reg lux_Union<Record>::index[] =
+{
+	lux_index(Record, byte),
+	lux_index(Record, real),
+};
+
 
 int main(int argc, char **argv)
 {
@@ -27,6 +30,7 @@ int main(int argc, char **argv)
 	luaL_openlibs(vm);
 
 	lux_Union<Record>::open(vm);
+
 	luaL_dofile(vm, "test3.lua");
 	lux_stackdump(vm);
 	lua_close(vm);

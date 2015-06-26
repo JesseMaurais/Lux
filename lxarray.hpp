@@ -4,18 +4,13 @@
 #include "lxalloc.hpp"
 #include "lxstack.hpp"
 
+// register POD array types
 int lux_openarray(lua_State *state);
+
 
 template <class C> struct lux_Array
 {
 	typedef lux_Type<C*> Type;
-
-	static C &value(lua_State *state, int index, int offset)
-	{
-		auto array = lux_to<C*>(state, index);
-		index = luaL_checkint(state, offset);
-		return array[index];
-	}
 
 	static int __new(lua_State *state)
 	{
@@ -54,32 +49,20 @@ template <class C> struct lux_Array
 			}
 			break;
 		  default:
-			return luaL_argerror(state, 1, "number, table, none");
+			return luaL_argerror(state, 1, "invalid type");
 		};
 
 		lux_push(state, data, size);
 		return 1;
 	}
 
-	static int __delete(lua_State *state)
+	static int __gc(lua_State *state)
 	{
 		auto user = lux_check<C*>(state, 1);
 		if (user->size && user->data)
 		{
 		 delete [] user->data;
 		}
-		return 0;
-	}
-
-	static int __index(lua_State *state)
-	{
-		lux_push<C>(state, value(state, 1, 2));
-		return 1;
-	}
-
-	static int __newindex(lua_State *state)
-	{
-		value(state, 1, 2) = lux_to<C>(state, 3);
 		return 0;
 	}
 
@@ -90,25 +73,35 @@ template <class C> struct lux_Array
 		return 1;
 	}
 
-	static int __concat(lua_State *state)
+	static int __index(lua_State *state)
 	{
-		auto user = lux_check<C*>(state, 2);
-		lua_pop(state, 1);
-
-		char string[user->size];
-		for (int it = 0; it < user->size; ++it)
-		{
-		 string[it] = static_cast<long>(user->data[it]) & 0x7F;
-		}
-
-		lua_pushlstring(state, string, user->size);
-		lua_concat(state, 2);
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		lux_push<C>(state, data[offset]);
 		return 1;
+	}
+
+	static int __newindex(lua_State *state)
+	{
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		data[offset] = lux_to<C>(state, 3);
+		return 0;
 	}
 
 	static int __add(lua_State *state)
 	{
-		lux_push<C*>(state, &value(state, 1, 2));
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		lux_push<C*>(state, data + offset);
+		return 1;
+	}
+
+	static int __sub(lua_State *state)
+	{
+		auto data = lux_to<C*>(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		lux_push<C*>(state, data - offset);
 		return 1;
 	}
 
@@ -135,12 +128,12 @@ template <class C> struct lux_Array
 		lua_pushcfunction(state, __index);
 		lua_settable(state, -3);
 
-		lua_pushliteral(state, "__concat");
-		lua_pushcfunction(state, __concat);
-		lua_settable(state, -3);
-
 		lua_pushliteral(state, "__add");
 		lua_pushcfunction(state, __add);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "__sub");
+		lua_pushcfunction(state, __sub);
 		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__len");
@@ -148,12 +141,17 @@ template <class C> struct lux_Array
 		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__gc");
-		lua_pushcfunction(state, __delete);
+		lua_pushcfunction(state, __gc);
 		lua_settable(state, -3);
-
+		
 		lua_register(state, Type::name, __new);
 		lua_pop(state, 1);
 		return 0;
+	}
+
+	static void require(lua_State *state, bool global=true)
+	{
+		luaL_requiref(state, Type::name, open, global);
 	}
 };
 

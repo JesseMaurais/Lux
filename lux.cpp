@@ -15,6 +15,37 @@ void *operator new [] (size_t size, lua_State *state)
 }
 
 
+// LXUNION.HPP ////////////////////////////////////////////////////////////////
+
+
+#include <cstdlib>
+#include <cstring>
+
+static int compare(const void *p1, const void *p2)
+{
+	const luaL_Reg *one = (const luaL_Reg *) p1;
+	const luaL_Reg *two = (const luaL_Reg *) p2;
+	return strcmp(one->name, two->name);
+}
+
+void lux_qsort(luaL_Reg *regs, size_t size)
+{
+	qsort(regs, size, sizeof(luaL_Reg), compare);
+}
+
+lua_CFunction lux_bsearch(const char *name, const luaL_Reg *regs, size_t size)
+{
+	luaL_Reg key = {name, nullptr};
+	union {
+	 luaL_Reg *reg;
+	 void *address;
+	};
+	reg = &key;
+	address = bsearch(address, regs, size, sizeof(luaL_Reg), compare);
+	return address ? reg->func : nullptr;
+}
+
+
 // LXARRAY.HPP ////////////////////////////////////////////////////////////////
 
 
@@ -25,11 +56,6 @@ template <> const char *lux_Array<long>::Type::name = "long";
 template <> const char *lux_Array<float>::Type::name = "float";
 template <> const char *lux_Array<double>::Type::name = "double";
 
-template <> const char *lux_Array<unsigned int>::Type::name = "uint";
-template <> const char *lux_Array<unsigned char>::Type::name = "uchar";
-template <> const char *lux_Array<unsigned short>::Type::name = "ushort";
-template <> const char *lux_Array<unsigned long>::Type::name = "ulong";
-
 int lux_openarray(lua_State *state)
 {
 	lux_Array<int>::open(state);
@@ -39,15 +65,8 @@ int lux_openarray(lua_State *state)
 	lux_Array<float>::open(state);
 	lux_Array<double>::open(state);
 
-	lux_Array<unsigned int>::open(state);
-	lux_Array<unsigned char>::open(state);
-	lux_Array<unsigned short>::open(state);
-	lux_Array<unsigned long>::open(state);
-
 	return 0;
 }
-
-template <> const char *lux_Type<const char*>::name = lux_Array<char>::Type::name;
 
 
 // LXSTACK.HPP ////////////////////////////////////////////////////////////////
@@ -130,28 +149,23 @@ template <> void lux_push<void*>(lua_State *state, void *value)
 {
 	lua_pushlightuserdata(state, value);
 }
-template <> void lux_push<std::string>(lua_State *state, std::string value)
-{
-	const char *string = value.c_str();
-	lua_pushstring(state, string);
-}
 
 
 template <> void lux_push<unsigned int>(lua_State *state, unsigned int value)
 {
-	lua_pushunsigned(state, value);
+	lua_pushinteger(state, value);
 }
 template <> void lux_push<unsigned char>(lua_State *state, unsigned char value)
 {
-	lua_pushunsigned(state, value);
+	lua_pushinteger(state, value);
 }
 template <> void lux_push<unsigned short>(lua_State *state, unsigned short value)
 {
-	lua_pushunsigned(state, value);
+	lua_pushinteger(state, value);
 }
 template <> void lux_push<unsigned long>(lua_State *state, unsigned long value)
 {
-	lua_pushunsigned(state, value);
+	lua_pushinteger(state, value);
 }
 
 
@@ -187,34 +201,32 @@ template <> void *lux_to<void*>(lua_State *state, int index)
 {
 	return lua_touserdata(state, index);
 }
-template <> std::string lux_to<std::string>(lua_State *state, int index)
-{
-	return lua_tostring(state, index);
-}
 
 
 template <> unsigned int lux_to<unsigned int>(lua_State *state, int index)
 {
-	return lua_tounsigned(state, index);
+	return lua_tointeger(state, index);
 }
 template <> unsigned char lux_to<unsigned char>(lua_State *state, int index)
 {
-	return lua_tounsigned(state, index);
+	return lua_tointeger(state, index);
 }
 template <> unsigned short lux_to<unsigned short>(lua_State *state, int index)
 {
-	return lua_tounsigned(state, index);
+	return lua_tointeger(state, index);
 }
 template <> unsigned long lux_to<unsigned long>(lua_State *state, int index)
 {
-	return lua_tounsigned(state, index);
+	return lua_tointeger(state, index);
 }
 
 
 template <> const char *lux_to<const char *>(lua_State *state, int index)
 {
-	if (lua_isstring(state, index)) return lua_tostring(state, index);
-	auto user = lux_test<char*>(state, index);
-	return user ? user->data : nullptr;
+	if (lua_isstring(state, index))
+	{
+	 return lua_tostring(state, index);
+	}
+	return lux_check<char*>(state, index)->data;
 }
 

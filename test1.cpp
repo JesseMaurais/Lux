@@ -2,10 +2,6 @@
 #include <stdexcept>
 #include <iostream>
 
-void Die(std::string why)
-{
-	throw std::runtime_error(why);
-}
 
 void HelloWorld()
 {
@@ -30,7 +26,6 @@ int main(int argc, char **argv)
 	lux_register(state, HelloWorld);
 	lux_register(state, Repeat);
 	lux_register(state, Add);
-	lux_register(state, Die);
 
 	luaL_dofile(state, "test1.lua");
 	lux_stackdump(state);
