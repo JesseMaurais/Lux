@@ -15,27 +15,28 @@ void *operator new [] (size_t size, lua_State *state)
 }
 
 
-// LXUNION.HPP ////////////////////////////////////////////////////////////////
+// LXCLASS.HPP ////////////////////////////////////////////////////////////////
 
 
 #include <cstdlib>
 #include <cstring>
 
-static int compare(const void *p1, const void *p2)
+
+static int compare(const void *ptr1, const void *ptr2)
 {
-	const luaL_Reg *one = (const luaL_Reg *) p1;
-	const luaL_Reg *two = (const luaL_Reg *) p2;
-	return strcmp(one->name, two->name);
+	auto reg1 = (const luaL_Reg *) ptr1;
+	auto reg2 = (const luaL_Reg *) ptr2;
+	return strcmp(reg1->name, reg2->name);
 }
 
-void lux_qsort(luaL_Reg *regs, size_t size)
+void lux_sort(luaL_Reg *regs, size_t size)
 {
 	qsort(regs, size, sizeof(luaL_Reg), compare);
 }
 
-lua_CFunction lux_bsearch(const char *name, const luaL_Reg *regs, size_t size)
+lua_CFunction lux_search(const char *name, const luaL_Reg *regs, size_t size)
 {
-	luaL_Reg key = {name, nullptr};
+	luaL_Reg key = {name};
 	union {
 	 luaL_Reg *reg;
 	 void *address;

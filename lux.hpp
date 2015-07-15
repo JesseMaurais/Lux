@@ -2,5 +2,4 @@
 #include "lxstack.hpp"
 #include "lxthunk.hpp"
 #include "lxarray.hpp"
-#include "lxunion.hpp"
 #include "lxclass.hpp"

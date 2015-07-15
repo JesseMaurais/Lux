@@ -8,43 +8,53 @@ template <class User> struct lux_Class
 {
 	typedef lux_Type<User*> Type;
 
-	static int __new(lua_State  *state)
+	static int __new(lua_State *state)
 	{
 		size_t size = 1;
 		User *data = nullptr;
-
 		switch (lua_type(state, 1))
 		{
 		  case LUA_TNIL:
+			// nullptr
 			size = 0;
 			break;
 		  case LUA_TNUMBER:
+			// array
 			size = lux_to<int>(state, 1);
 		  case LUA_TNONE:
-			data = new User [size];	
+			// single
+			if (size) data = new User [size];
+			break;
+		  case LUA_TUSERDATA:
+			// cast
+			data = (User*) lux_to<void*>(state, 1);
+			size = 0;
 			break;
 		  default:
-			return luaL_argerror(state, 1, "number, none, nil");
+			return luaL_argerror(state, 1, "invalid type");
 		};
-
-		lux_push(state, data, size);
+		Type::push(state, data, size);
+		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
 
 	static int __gc(lua_State *state)
 	{
-		Type *user = Type::check(state, 1);
-		if (user->data and user->size)
-		{
-		 delete [] user->data;
-		}
+		Type *user = Type::check(state);
+		if (user->size) delete [] user->data;
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
-		Type *user = Type::check(state, 1);
-		lua_pushfstring(state, "%s: %p", Type::name, user);
+		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
+		return 1;
+	}
+
+	static int __len(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		lux_push(state, user->size);
 		return 1;
 	}
 
@@ -60,63 +70,71 @@ template <class User> struct lux_Class
 	{
 		User *data = lux_to<User*>(state, 1);
 		int offset = lux_to<int>(state, 2);
-		lux_push(state, data + offset);
+		lux_push(state, data - offset);
 		return 1;
 	}
 
-	static int __len(lua_State *state)
+	template <class Base>
+	static int member(lua_State *state, Base User::*field)
 	{
-		Type *user = Type::check(state, 1);
-		lua_pushinteger(state, user->size);
-		return 1;
+		User *data = lux_to<User*>(state, 1);
+		if (lua_gettop(state) > 1)
+		{
+		 data->*field = lux_to<Base>(state, 2);
+		 return 0;
+		}
+		else
+		{
+		 lux_push<Base>(state, data->*field);
+		 return 1;
+		}
 	}
 
 	static int open(lua_State *state)
 	{
+		Type::name = luaL_checkstring(state, 1);
 		luaL_newmetatable(state, Type::name);
-		int meta = lua_gettop(state);
-		lua_newtable(state);
-		int tab = lua_gettop(state);
 
-		lua_pushliteral(state, "__metatable");
-		lua_pushvalue(state, tab);
-		lua_settable(state, meta);
-
-		lua_pushliteral(state, "__index");
-		lua_pushvalue(state, tab);
-		lua_settable(state, meta);
-		
-		lua_pushliteral(state, "__tostring");
-		lua_pushcfunction(state, __tostring);
-		lua_settable(state, meta);
-
-		lua_pushliteral(state, "__add");
-		lua_pushcfunction(state, __add);
-		lua_settable(state, meta);
-
-		lua_pushliteral(state, "__sub");
-		lua_pushcfunction(state, __sub);
-		lua_settable(state, meta);
-
-		lua_pushliteral(state, "__len");
-		lua_pushcfunction(state, __len);
-		lua_settable(state, meta);
+		lua_pushliteral(state, "new");
+		lua_pushcfunction(state, __new);
+		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__gc");
 		lua_pushcfunction(state, __gc);
-		lua_settable(state, meta);
+		lua_settable(state, -3);
 
-		setfuncs(state);
-		lua_pop(state, 2);
-		lua_pushcfunction(state, __new);
-		lua_setglobal(state, Type::name);
+		lua_pushliteral(state, "__add");
+		lua_pushcfunction(state, __add);
+		lua_settable(state, -3);
 
-		return 0;
+		lua_pushliteral(state, "__sub");
+		lua_pushcfunction(state, __sub);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "__len");
+		lua_pushcfunction(state, __len);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "__tostring");
+		lua_pushcfunction(state, __tostring);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "__index");
+		luaL_newlib(state, regs);
+		lua_settable(state, -3);
+
+		return 1;
 	}
 
-	// implement these per specification
-	static void setfuncs(lua_State *state);
+	static luaL_Reg regs[];
 };
+
+template <class User> luaL_Reg lux_Class<User>::regs [] = {{nullptr}};
+
+#define lux_member(C, x) \
+	[](lua_State *state)->int { return lux_Class<C>::member(state, &C::x); }
+
+#define lux_method(C, x) lux_cast(C::x)
 
 #endif // file
 

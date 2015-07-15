@@ -67,13 +67,11 @@ template <typename Res, typename Obj, typename... Args>
 	}
  }
 
+
 // Wrap the above thunks in an anonymous function compatible with Lua
 
-#define lux_wrap(fun) [](lua_State *state)->int{return lux_thunk(state, &fun);}
-
-// Cast the wrapped C++ function to Lua's "C" function
-
-#define lux_cast(fun) static_cast<lua_CFunction>(lux_wrap(fun))
+#define lux_cast(fun) \
+	[](lua_State *state)->int{ return lux_thunk(state, &fun); }
 
 
 #endif // file

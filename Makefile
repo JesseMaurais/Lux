@@ -1,11 +1,11 @@
 CC=g++
 CFLAGS=-std=c++11
-SRC=lux.cpp lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxunion.hpp lxclass.hpp
+SRC=lux.cpp lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
 
-all: liblux.so array.so random.so
+all: liblux.so
 
 clean:
-	rm liblux.so array.so random.so
+	rm liblux.so array.so random.so test.so
 
 install: liblux.so $(SRC)
 	cp liblux.so /usr/local/lib
@@ -20,9 +20,12 @@ uninstall:
 liblux.so: $(SRC)
 	$(CC) $(CFLAGS) -shared -o liblux.so -fpic lux.cpp
 
-random.so: random.cpp
+random: $(SRC) random.cpp
 	$(CC) $(CFLAGS) -shared -o random.so -fpic random.cpp -llux
 
-array.so: array.cpp
+array: $(SRC) array.cpp
 	$(CC) $(CFLAGS) -shared -o array.so -fpic array.cpp -llux
+
+test: $(SRC) test.cpp
+	$(CC) $(CFLAGS) -shared -o test.so -fpic test.cpp -llux
 
