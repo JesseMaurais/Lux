@@ -125,9 +125,8 @@ void lux_push<unsigned long long>(lua_State *state, unsigned long long value)
 // Special case of explicit nullptr argument
 
 template <> inline
-void lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t value)
+void lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t)
 {
-	(void) value;
 	lua_pushnil(state);
 }
 

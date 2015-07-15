@@ -4,10 +4,14 @@
 #include "lxtypes.hpp"
 #include "lxstack.hpp"
 
+// Emulate C arrays/pointers in Lua
+
 template <class User> struct lux_Array
 {
+	// Pointer implementation
 	typedef lux_Type<User*> Type;
 
+	// Array allocation function
 	static int __new(lua_State *state)
 	{
 		const char *string;
@@ -53,6 +57,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -60,12 +65,14 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
+	// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
 		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
 		return 1;
 	}
 
+	// Read array data at offset
 	static int __index(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -74,6 +81,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Write array data at offset
 	static int __newindex(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -82,6 +90,7 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
+	// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -90,6 +99,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Pointer subtraction arithmetic
 	static int __sub(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -98,6 +108,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Size of array or zero if pointer
 	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -105,6 +116,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
 		Type::name = luaL_checkstring(state, 1);
@@ -119,7 +131,7 @@ template <class User> struct lux_Array
 		{"__sub", __sub},
 		{"__len", __len},
 		{"__gc", __gc},
-		{nullptr, nullptr}
+		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
 		return 1;

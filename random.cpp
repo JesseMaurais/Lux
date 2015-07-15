@@ -1,6 +1,5 @@
 #include "lux.hpp"
 #include <random>
-#include <type_traits>
 
 /*
  * Finds an optional function argument, buried in a table at index arg, and

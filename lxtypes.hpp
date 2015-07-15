@@ -122,6 +122,8 @@ template <class User> struct lux_Type : lux_Store<User>
 	}
 };
 
+// Specialize for pointers -- convert between nullptr/nil
+
 template <class User> struct lux_Type<User*> : lux_Store<User*>
 {
 	typedef lux_Type<User*> Type;
@@ -161,15 +163,6 @@ template <class User> struct lux_Type<User*> : lux_Store<User*>
 	}
 };
 
-template <class User>
- void lux_newtype(lua_State *state, const char *name=nullptr)
-{
-	typedef lux_Type<User> Type;
-	if (name) Type::name = name;
-	lua_pushstring(state, Type::name);
-	luaL_newmetatable(state, Type::name);
-	lua_settable(state, -3);
-}
 
 #endif // file
 

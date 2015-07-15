@@ -4,10 +4,13 @@
 #include "lxalloc.hpp"
 #include "lxstack.hpp"
 
+// Export C++ class/struct/union to Lua
+
 template <class User> struct lux_Class
 {
 	typedef lux_Type<User*> Type;
 
+	// Array allocation function
 	static int __new(lua_State *state)
 	{
 		size_t size = 1;
@@ -38,6 +41,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
+	// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -45,12 +49,14 @@ template <class User> struct lux_Class
 		return 0;
 	}
 
+	// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
 		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
 		return 1;
 	}
 
+	// Size of array or zero if pointer
 	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -58,6 +64,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
+	// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -66,6 +73,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
+	// Pointer subtraction arithmetic
 	static int __sub(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -74,6 +82,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
+	// Read/Write into given fields of the record
 	template <class Base>
 	static int member(lua_State *state, Base User::*field)
 	{
@@ -90,6 +99,7 @@ template <class User> struct lux_Class
 		}
 	}
 
+	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
 		Type::name = luaL_checkstring(state, 1);
@@ -129,12 +139,19 @@ template <class User> struct lux_Class
 	static luaL_Reg regs[];
 };
 
+// Assume empty unless user specifies otherwise
+
 template <class User> luaL_Reg lux_Class<User>::regs [] = {{nullptr}};
+
+// Wrap a member accessor in an anonymous function compatible with Lua
 
 #define lux_member(C, x) \
 	[](lua_State *state)->int { return lux_Class<C>::member(state, &C::x); }
 
+// Use a similar syntax for class methods
+
 #define lux_method(C, x) lux_cast(C::x)
+
 
 #endif // file
 

@@ -15,38 +15,6 @@ void *operator new [] (size_t size, lua_State *state)
 }
 
 
-// LXCLASS.HPP ////////////////////////////////////////////////////////////////
-
-
-#include <cstdlib>
-#include <cstring>
-
-
-static int compare(const void *ptr1, const void *ptr2)
-{
-	auto reg1 = (const luaL_Reg *) ptr1;
-	auto reg2 = (const luaL_Reg *) ptr2;
-	return strcmp(reg1->name, reg2->name);
-}
-
-void lux_sort(luaL_Reg *regs, size_t size)
-{
-	qsort(regs, size, sizeof(luaL_Reg), compare);
-}
-
-lua_CFunction lux_search(const char *name, const luaL_Reg *regs, size_t size)
-{
-	luaL_Reg key = {name};
-	union {
-	 luaL_Reg *reg;
-	 void *address;
-	};
-	reg = &key;
-	address = bsearch(address, regs, size, sizeof(luaL_Reg), compare);
-	return address ? reg->func : nullptr;
-}
-
-
 // LXSTACK.HPP ////////////////////////////////////////////////////////////////
 
 
