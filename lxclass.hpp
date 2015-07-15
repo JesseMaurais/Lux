@@ -4,14 +4,14 @@
 #include "lxalloc.hpp"
 #include "lxstack.hpp"
 
-template <class C> struct lux_Class
+template <class User> struct lux_Class
 {
-	typedef lux_Type<C*> Type;
+	typedef lux_Type<User*> Type;
 
 	static int __new(lua_State  *state)
 	{
 		size_t size = 1;
-		C *data = nullptr;
+		User *data = nullptr;
 
 		switch (lua_type(state, 1))
 		{
@@ -19,9 +19,9 @@ template <class C> struct lux_Class
 			size = 0;
 			break;
 		  case LUA_TNUMBER:
-			size = lua_tointeger(state, 1);
+			size = lux_to<int>(state, 1);
 		  case LUA_TNONE:
-			data = new C [size];	
+			data = new User [size];	
 			break;
 		  default:
 			return luaL_argerror(state, 1, "number, none, nil");
@@ -33,8 +33,8 @@ template <class C> struct lux_Class
 
 	static int __gc(lua_State *state)
 	{
-		auto user = lux_check<C*>(state, 1);
-		if (user->size && user->data)
+		Type *user = Type::check(state, 1);
+		if (user->data and user->size)
 		{
 		 delete [] user->data;
 		}
@@ -43,30 +43,30 @@ template <class C> struct lux_Class
 
 	static int __tostring(lua_State *state)
 	{
-		void *address = luaL_checkudata(state, 1, Type::name);
-		lua_pushfstring(state, "%s: %p", Type::name, address);
+		Type *user = Type::check(state, 1);
+		lua_pushfstring(state, "%s: %p", Type::name, user);
 		return 1;
 	}
 
 	static int __add(lua_State *state)
 	{
-		auto data = lux_to<C*>(state, 1);
-		int offset = luaL_checkinteger(state, 2);
+		User *data = lux_to<User*>(state, 1);
+		int offset = lux_to<int>(state, 2);
 		lux_push(state, data + offset);
 		return 1;
 	}
 
 	static int __sub(lua_State *state)
 	{
-		auto data = lux_to<C*>(state, 1);
-		int offset = luaL_checkinteger(state, 2);
+		User *data = lux_to<User*>(state, 1);
+		int offset = lux_to<int>(state, 2);
 		lux_push(state, data + offset);
 		return 1;
 	}
 
 	static int __len(lua_State *state)
 	{
-		auto user = lux_check<C*>(state, 1);
+		Type *user = Type::check(state, 1);
 		lua_pushinteger(state, user->size);
 		return 1;
 	}

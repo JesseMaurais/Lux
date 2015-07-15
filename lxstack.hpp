@@ -1,164 +1,234 @@
 #ifndef __lxstack__
 #define __lxstack__
 
-#include "lxalloc.hpp"
-#include <typeinfo>
+#include "lxtypes.hpp"
 
-// print entire stack to stdout
+// Print entire stack to stdout
+
 int lux_stackdump(lua_State *state);
 
-// interface for full userdata
-template <class C> struct lux_Type
+// Variadic push -- for stacking many data at once
+
+template <class User, class... Args> inline
+int lux_push(lua_State *state, User data, Args... args)
 {
-	C data;
-	size_t size;
-	static const char *name;
-
-	lux_Type(C data, size_t size=0)
-	{
-		this->data = data;
-		this->size = size;
-	}
-};
-
-// ensures emission of type but string format is implementation dependent
-template <class C> const char *lux_Type<C>::name = typeid(C).name();
-
-// be invariant to const-ness of pointers
-template <class C> struct lux_Type<const C*>
-{
-	const C *data;
-	size_t size;
-	static const char *name;
-
-	lux_Type(const C *data, size_t size=0)
-	{
-		this->data = data;
-		this->size = size;
-	}
-};
-
-// use the same metatable as the class without the const qualifier
-template <class C> const char *lux_Type<const C*>::name = lux_Type<C*>::name;
-
-// treat arrays as if they were pointers
-template <class C, int n> struct lux_Type<C[n]>
-{
-	C *data;
-	size_t size;
-	static const char *name;
-	lux_Type(C *data, size_t size=0)
-	{
-		this->data = data;
-		this->size = size;
-	}
-};
-
-// use the same metatable as the class defined as pointer rather than array
-template <class C, int n> const char *lux_Type<C[n]>::name = lux_Type<C*>::name;
-
-
-// register a metatable for a type
-template <class C> bool lux_newtype(lua_State *state, const char *name=nullptr)
-{
-	typedef lux_Type<C> Type;
-	if (name) Type::name = name;
-	return luaL_newmetatable(state, Type::name);
+	lux_push(state, data);
+	lux_push(state, args...);
+	return sizeof...(Args) + 1;
 }
 
-// generic push for opaque userdata types with storage size
-template <class C> void lux_push(lua_State *state, C data, size_t size)
+// Generic push -- assume that argument is a userdata
+ 
+template <class User> inline
+void lux_push(lua_State *state, User data)
 {
-	typedef lux_Type<C> Type;
-	if (!data)
-	{
-	 lua_pushnil(state);
-	 return;
-	}
-	auto user = new (state) Type(data, size);
+	typedef lux_Type<User> Type;
+	(void) Type::push(state, data);
 	luaL_setmetatable(state, Type::name);
 }
 
-// generic push for opaque userdata types (general form)
-template <class C> void lux_push(lua_State *state, C data)
+// Generic to -- convert userdata at given stack index
+
+template <class User> inline
+User lux_to(lua_State *state, int stack)
 {
-	typedef lux_Type<C> Type;
-	if (!data)
+	typedef lux_Type<User> Type;
+	return Type::to(state, stack);
+}
+
+// Full function template specialization of push/to for POD types
+
+template <> inline
+void lux_push<bool>(lua_State *state, bool value)
+{
+	lua_pushboolean(state, value);
+}
+template <> inline
+void lux_push<int>(lua_State *state, int value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<char>(lua_State *state, char value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<short>(lua_State *state, short value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<long>(lua_State *state, long value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<float>(lua_State *state, float value)
+{
+	lua_pushnumber(state, value);
+}
+template <> inline
+void lux_push<double>(lua_State *state, double value)
+{
+	lua_pushnumber(state, value);
+}
+template <> inline
+void lux_push<void*>(lua_State *state, void *value)
+{
+	lua_pushlightuserdata(state, value);
+}
+template <> inline
+void lux_push<long long>(lua_State *state, long long value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<long double>(lua_State *state, long double value)
+{
+	lua_pushnumber(state, value);
+}
+template <> inline
+void lux_push<lua_CFunction>(lua_State *state, lua_CFunction value)
+{
+	lua_pushcfunction(state, value);
+}
+
+// For unsigned types
+
+template <> inline
+void lux_push<unsigned int>(lua_State *state, unsigned int value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<unsigned char>(lua_State *state, unsigned char value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<unsigned short>(lua_State *state, unsigned short value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<unsigned long>(lua_State *state, unsigned long value)
+{
+	lua_pushinteger(state, value);
+}
+template <> inline
+void lux_push<unsigned long long>(lua_State *state, unsigned long long value)
+{
+	lua_pushinteger(state, value);
+}
+
+// Special case of explicit nullptr argument
+
+template <> inline
+void lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t value)
+{
+	(void) value;
+	lua_pushnil(state);
+}
+
+// "to" rather than "check" counterparts in stack conversion
+
+template <> inline
+bool lux_to<bool>(lua_State *state, int stack)
+{
+	return lua_toboolean(state, stack);
+}
+template <> inline
+int lux_to<int>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+char lux_to<char>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+short lux_to<short>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+long lux_to<long>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+float lux_to<float>(lua_State *state, int stack)
+{
+	return lua_tonumber(state, stack);
+}
+template <> double lux_to<double>(lua_State *state, int stack)
+{
+	return lua_tonumber(state, stack);
+}
+template <> inline
+void *lux_to<void*>(lua_State *state, int stack)
+{
+	return lua_touserdata(state, stack);
+}
+template <> inline
+long long lux_to<long long>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+long double lux_to<long double>(lua_State *state, int stack)
+{
+	return lua_tonumber(state, stack);
+}
+template <> inline
+lua_CFunction lux_to<lua_CFunction>(lua_State *state, int stack)
+{
+	return lua_tocfunction(state, stack);
+}
+
+// For unsigned types
+
+template <> inline
+unsigned int lux_to<unsigned int>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+unsigned char lux_to<unsigned char>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+unsigned short lux_to<unsigned short>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+unsigned long lux_to<unsigned long>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+template <> inline
+unsigned long long lux_to<unsigned long long>(lua_State *state, int stack)
+{
+	return lua_tointeger(state, stack);
+}
+
+// Special case of string representation in char array
+
+template <> inline
+const char *lux_to<const char *>(lua_State *state, int stack)
+{
+	if (lua_isstring(state, stack))
 	{
-	 lua_pushnil(state);
-	 return;
+		return lua_tostring(state, stack);
 	}
-	auto user = new (state) Type(data);
-	luaL_setmetatable(state, Type::name);
+	typedef lux_Type<char*> Type;
+	return Type::to(state, stack);
 }
 
-// generic to -- userdata from the stack at given index
-template <class C> C lux_to(lua_State *state, int index)
-{
-	typedef lux_Type<C> Type;
-	union {
-	 Type *user;
-	 void *data;
-	};
-	data = luaL_checkudata(state, index, Type::name);
-	return user->data;
-}
-
-// obtain the box pointer rather than the userdata
-template <class C> lux_Type<C> *lux_check(lua_State *state, int index)
-{
-	typedef lux_Type<C> Type;
-	union {
-	 Type *user;
-	 void *data;
-	};
-	data = luaL_checkudata(state, index, Type::name);
-	return user;
-}
-
-// obtain the box pointer but return null if there's a type mismatch
-template <class C> lux_Type<C> *lux_test(lua_State *state, int index)
-{
-	typedef lux_Type<C> Type;
-	union {
-	 Type *user;
-	 void *data;
-	};
-	data = luaL_testudata(state, index, Type::name);
-	return user;
-}
-
-// full function template specialization of push/to for POD types
-
-template <> void lux_push<bool>(lua_State *state, bool);
-template <> void lux_push<int>(lua_State *state, int);
-template <> void lux_push<char>(lua_State *state, char);
-template <> void lux_push<short>(lua_State *state, short);
-template <> void lux_push<long>(lua_State *state, long);
-template <> void lux_push<float>(lua_State *state, float);
-template <> void lux_push<double>(lua_State *state, double);
-template <> void lux_push<void*>(lua_State *state, void*);
-
-template <> void lux_push<unsigned int>(lua_State *state, unsigned int);
-template <> void lux_push<unsigned char>(lua_State *state, unsigned char);
-template <> void lux_push<unsigned short>(lua_State *state, unsigned short);
-template <> void lux_push<unsigned long>(lua_State *state, unsigned long);
-
-template <> bool lux_to<bool>(lua_State *state, int index);
-template <> int lux_to<int>(lua_State *state, int index);
-template <> char lux_to<char>(lua_State *state, int index);
-template <> short lux_to<short>(lua_State *state, int index);
-template <> long lux_to<long>(lua_State *state, int index);
-template <> float lux_to<float>(lua_State *state, int index);
-template <> double lux_to<double>(lua_State *state, int index);
-template <> void *lux_to<void*>(lua_State *state, int index);
-
-template <> unsigned int lux_to<unsigned int>(lua_State *state, int index);
-template <> unsigned char lux_to<unsigned char>(lua_State *state, int index);
-template <> unsigned short lux_to<unsigned short>(lua_State *state, int index);
-template <> unsigned long lux_to<unsigned long>(lua_State *state, int index);
-
-template <> const char *lux_to<const char *>(lua_State *state, int index);
 
 #endif // file
 

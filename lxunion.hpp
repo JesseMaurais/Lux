@@ -2,23 +2,27 @@
 #define __lxunion__
 
 #include "lxalloc.hpp"
+#include "lxtypes.hpp"
 #include "lxstack.hpp"
 
 
 // sort a function registry by name
 void lux_qsort(luaL_Reg *regs, size_t size);
+
 // search a sorted function registry
 lua_CFunction lux_bsearch(const char *key, const luaL_Reg *regs, size_t size);
+
 // the number of items in an array of luaL_Reg
 #define lux_regsize(regs) (sizeof(regs)/sizeof(luaL_Reg))
 // this works assuming that regs is *not* dynamically allocated
 #define lux_search(key, regs) lux_bsearch(key, regs, lux_regsize(regs))
+#define lux_sort(regs) lux_qsort(regs, lux_regsize(regs))
 
 
 // class prototype for accessing C structs & unions in Lua
-template <class C> struct lux_Union
+template <class User> struct lux_Union
 {
-	typedef lux_Type<C*> Type;
+	typedef lux_Type<User*> Type;
 
 	static luaL_Reg index[];
 	static luaL_Reg newindex[];
@@ -26,60 +30,54 @@ template <class C> struct lux_Union
 	static int __new(lua_State *state)
 	{
 		size_t size = 1;
-		C *data = nullptr;
+		User *data = nullptr;
 
 		switch (lua_type(state, 1))
 		{
 		  case LUA_TNIL:
 			// nullptr
-			lux_push(state, data, 0);
-			break;
-		  case LUA_TNONE:
-			// single
-			lux_push(state, new C, size);
+			size = 0;
 			break;
 		  case LUA_TNUMBER:
 			// array
-			size = lua_tointeger(state, 1);
-			if (size) data = new C [size];
-			lux_push(state, data, size);
+			size = lux_to<int>(state, 1);
+		  case LUA_TNONE:
+			// single
+			if (size) data = new User [size];
 			break;
 		  case LUA_TUSERDATA:
 			// cast
-			data = (C*) lua_touserdata(state, 1);
-			lux_push(state, data, 0);
+			data = (User*) lua_touserdata(state, 1);
+			size = 0;
 			break;
 		  case LUA_TTABLE:
 			// constructor
-			lux_push(state, new C, size);
+			Type::push(state, new User, size);
 			lua_pushnil(state);
 			while (lua_next(state, 1))
 			{
 			 __newindex(state);
 			 lua_pop(state, 1);
 			}
-			break;
+			return 1;
 		  default:
 			return luaL_argerror(state, 1, "invalid type");
 		};
 
+		Type::push(state, data, size);
 		return 1;
 	}
 
 	static int __gc(lua_State *state)
 	{
-		auto user = lux_check<C*>(state, 1);
-		if (user->size && user->data)
-		{
-		 delete [] user->data;
-		}
+		auto user = Type::check(state, 1);
+		if (user->size) delete [] user->data;
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
-		void *address = luaL_checkudata(state, 1, Type::name);
-		lua_pushfstring(state, "%s: %p", Type::name, address);
+		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
 		return 1;
 	}
 
@@ -109,85 +107,67 @@ template <class C> struct lux_Union
 	{
 		if (lua_istable(state, -1))
 		{
-		 lua_pushnil(state);
-		 while (lua_next(state, -1))
-		 {
-		  __newindex(state);
-		  lua_pop(state, 1);
-		 }
+			lua_pushnil(state);
+			while (lua_next(state, -1))
+			{
+				__newindex(state);
+				lua_pop(state, 1);
+			}
 		}
 		return 0;
 	}
 
 	static int __len(lua_State *state)
 	{
-		auto user = lux_check<C*>(state, 1);
+		auto user = Type::check(state, 1);
 		lua_pushinteger(state, user->size);
 		return 1;
 	}
 
 	static int __add(lua_State *state)
 	{
-		auto address = lux_to<C*>(state, 1);
-		ptrdiff_t offset = luaL_checkinteger(state, 2);
-		lux_push(state, address + offset);
+		User *data = lux_to<User*>(state, 1);
+		int offset = lux_to<int>(state, 2);
+		lux_push(state, data + offset);
 		return 1;
 	}
 
 	static int __sub(lua_State *state)
 	{
-		auto address = lux_to<C*>(state, 1);
-		ptrdiff_t offset = luaL_checkinteger(state, 2);
-		lux_push(state, address - offset);
+		User *data = lux_to<User*>(state, 1);
+		int offset = lux_to<int>(state, 2);
+		lux_push(state, data - offset);
 		return 1;
+	}
+
+	static void setfuncs(lua_State *state, int up=0)
+	{
+		luaL_Reg regs [] =
+		{
+		{"__tostring", __tostring},
+		{"__newindex", __newindex},
+		{"__index", __index},
+		{"__call", __call},
+		{"__len", __len},
+		{"__add", __add},
+		{"__sub", __sub},
+		{"__gc", __gc},
+		{"new", __new},
+		{nullptr, nullptr}
+		};
+		luaL_setfuncs(state, regs, up);
 	}
 
 	static int open(lua_State *state)
 	{
 		// ensure these lists are sorted
-		lux_qsort(index, lux_regsize(index));
-		lux_qsort(newindex, lux_regsize(newindex));
-
+		lux_sort(index);
+		lux_sort(newindex);
 		// register/get the metatable
 		luaL_newmetatable(state, Type::name);
-
-		lua_pushliteral(state, "__tostring");
-		lua_pushcfunction(state, __tostring);
-		lua_settable(state, -3);
-		
-		lua_pushliteral(state, "__newindex");
-		lua_pushcfunction(state, __newindex);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__index");
-		lua_pushcfunction(state, __index);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__call");
-		lua_pushcfunction(state, __call);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__len");
-		lua_pushcfunction(state, __len);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__add");
-		lua_pushcfunction(state, __add);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__sub");
-		lua_pushcfunction(state, __sub);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "__gc");
-		lua_pushcfunction(state, __gc);
-		lua_settable(state, -3);
-
-		lua_pushliteral(state, "new");
-		lua_pushcfunction(state, __new);
-		lua_settable(state, -3);
-
-		lua_setglobal(state, Type::name);
+		setfuncs(state);
+		// table[Type::name] = metatable
+		lua_setfield(state, -2, Type::name);
 		return 0;
 	}
 
@@ -200,11 +180,11 @@ template <class C> struct lux_Union
 	template <class X, int offset> static X *at(lua_State *state, int index)
 	{
 		union {
-		 C *buffer;
+		 User *buffer;
 		 char *address;
 		 X *object;
 		};
-		buffer = lux_to<C*>(state, index);
+		buffer = lux_to<User*>(state, index);
 		address += offset;
 		return object;
 	}
@@ -241,8 +221,8 @@ template <class C> struct lux_Union
 #define lux_subindex(C, x) {#x, lux_sub(C, x)}
 
 // default to empty unless specified otherwise
-template <class C> luaL_Reg lux_Union<C>::index[] = {};
-template <class C> luaL_Reg lux_Union<C>::newindex[] = {};
+template <class User> luaL_Reg lux_Union<User>::index[] = {};
+template <class User> luaL_Reg lux_Union<User>::newindex[] = {};
 
 #endif // file
 

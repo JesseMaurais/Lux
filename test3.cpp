@@ -9,6 +9,11 @@ struct Record
 	short word;
 	};
 	double real;
+
+	void say(void)
+	{
+		puts("Hello World!");
+	}
 };
 
 template <> const char *lux_Union<Record>::Type::name = "Record";
@@ -21,6 +26,7 @@ template <> luaL_Reg lux_Union<Record>::index[] =
 {
 	lux_index(Record, byte),
 	lux_index(Record, real),
+	lux_reg(Record, say)
 };
 
 

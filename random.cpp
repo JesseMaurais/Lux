@@ -1,11 +1,11 @@
 #include "lux.hpp"
 #include <random>
-
+#include <type_traits>
 
 /*
  * Finds an optional function argument, buried in a table at index arg, and
  * returns it, unless arg is nil or the field name is not in the table, in
- * which case it turns n as a fallback value.
+ * which case it returns n as a fallback value.
  */
 
 static lua_Number opt(lua_State *state, int arg, const char *name, lua_Number n)
@@ -13,7 +13,7 @@ static lua_Number opt(lua_State *state, int arg, const char *name, lua_Number n)
 	// is index 'arg' a table?
 	if (lua_istable(state, arg))
 	{
-		// does the table have a numeric field 'name' 
+		// does the table have a numeric field 'name'?
 		if (lua_getfield(state, arg, name) == LUA_TNUMBER)
 		{
 			// copy that number here
@@ -30,23 +30,12 @@ static lua_Number opt(lua_State *state, int arg, const char *name, lua_Number n)
  * devices or pseudo random engines. 
  */
 
-template <class C> struct Random
+template <class Base> struct Random
 {
 	// globally visible alias
-	typedef lux_Type<C> Type;
+	typedef lux_Type<Base> Type;
 
-	// return the box-pointer to a full userdata
-	static Type *check(lua_State *state, int index)
-	{
-		union {
-		 void *address;
-		 Type *user;
-		};
-		address = luaL_checkudata(state, index, Type::name);
-		return user;
-	}
-
-	// create an object of class C and set it's metatable
+	// create an object of class Base and set its metatable
 	static int __new(lua_State *state)
 	{
 		new (state) Type;
@@ -57,15 +46,22 @@ template <class C> struct Random
 	// on garbage collection, call object's destructor
 	static int __gc(lua_State *state)
 	{
-		auto user = check(state, 1);
-		user->data.~C();
+		Type *user = Type::check(state);
+		user->data.~Base();
 		return 0;
+	}
+
+	// for printing the name of this object
+	static int __tostring(lua_State *state)
+	{
+		lua_pushfstring(state, "random.%s", Type::name);
+		return 1;
 	}
 
 	// generate a sequence of random numbers
 	static int __call(lua_State *state)
 	{
-		auto user = check(state, 1);
+		auto user = Type::check(state, 1);
 		// if many, store them in a table
 		size_t size = luaL_optinteger(state, 2, 0);
 		if (size)
@@ -100,11 +96,12 @@ template <class C> struct Random
 	}
 
 	// similar to above but following a given probability distribution
-	template <class D> static int generate(lua_State *state, D &distribution)
+	template <class Distribution>
+	static int generate(lua_State *state, Distribution &distribution)
 	{
-		auto user = check(state, 1);
+		Type *user = Type::check(state, 1);
 		// if many, store them in a table
-		size_t size = luaL_optinteger(state, 2, 0);
+		size_t size = opt(state, 2, "size", 0);
 		if (size)
 		{
 			// user supplied a table?
@@ -139,30 +136,23 @@ template <class C> struct Random
 	// continuous uniform random numbers
 	static int uniform(lua_State *state)
 	{
-		// distribution parameters
-		auto min = opt(state, 3, "min", 0);
-		auto max = opt(state, 3, "max", 1);
+		lua_Number a, b;
+		// provided parameter table?
+		if (lua_istable(state, 3))
+		{
+		 a = opt(state, 3, "min", 0.0);
+		 b = opt(state, 3, "max", 1.0);
+		}
 		// probability distribution object
-		std::uniform_real_distribution<lua_Number> distribution(min, max);
+		std::uniform_real_distribution<lua_Number> distribution(a, b);
 		// instantiate the generator template function
-		return generate(state, distribution);
-	}
-
-	// (continuous) exponential random numbers
-	static int exponential(lua_State *state)
-	{
-		// distribution parameters
-		auto rate = luaL_optnumber(state, 3, 1.0);
-		// probability distribution object
-		std::exponential_distribution<lua_Number> distribution(rate);
-		// instantial the generate template function
 		return generate(state, distribution);
 	}
 
 	// device/engine's minimum value
 	static int min(lua_State *state)
 	{
-		auto user = check(state, 1);
+		Type *user = Type::check(state);
 		auto value = user->data.min();
 		lux_push(state, value);
 		return 1;
@@ -171,7 +161,7 @@ template <class C> struct Random
 	// device/engine's maximum value
 	static int max(lua_State *state)
 	{
-		auto user = check(state, 1);
+		Type *user = Type::check(state);
 		auto value = user->data.max();
 		lux_push(state, value);
 		return 1;
@@ -180,11 +170,15 @@ template <class C> struct Random
 	// create and fill a metatable
 	static int open(lua_State *state)
 	{
-		Type::name = lua_tostring(state, -1);
+		Type::name = lua_tostring(state, 1);
 		luaL_newmetatable(state, Type::name);
 		
 		lua_pushliteral(state, "new");
 		lua_pushcfunction(state, __new);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "__tostring");
+		lua_pushcfunction(state, __tostring);
 		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__call");
@@ -199,22 +193,15 @@ template <class C> struct Random
 		lua_newtable(state);
 		luaL_Reg common [] =
 		{
-		 {"min", min},
-		 {"max", max},
-		 {"uniform", uniform},
-		 {"exponential", exponential},
-		 {nullptr, nullptr}
+		{"min", min},
+		{"max", max},
+		{"uniform", uniform},
+		{nullptr, nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
 		luaL_setfuncs(state, common, 0);
 		lua_settable(state, -3);
-
 		return 1;
-	}
-
-	static void require(lua_State *state, const char *name, bool global=false)
-	{
-		luaL_requiref(state, name, open, global);
 	}
 
 	// for sub-classes (see below)
@@ -229,8 +216,8 @@ template <class C> struct Random
 
 static int entropy(lua_State *state)
 {
-	typedef Random<std::random_device> Random;
-	auto user = Random::check(state, 1);
+	typedef lux_Type<std::random_device> Type;
+	Type *user = Type::check(state);
 	auto value = user->data.entropy();
 	lux_push(state, value);
 	return 1;
@@ -238,7 +225,7 @@ static int entropy(lua_State *state)
 
 template <> luaL_Reg Random<std::random_device>::regs[] =
 {
- {"entropy", entropy}, {nullptr, nullptr}
+ {"entropy", entropy}, {nullptr}
 };
 
 
@@ -247,25 +234,27 @@ template <> luaL_Reg Random<std::random_device>::regs[] =
  */
 
 
-template <class C> static int seed(lua_State *state)
+template <class Base> static int seed(lua_State *state)
 {
-	auto user = Random<C>::check(state, 1);
+	typedef lux_Type<Base> Type;
+	Type *user = Type::check(state, 1);
 	int value = luaL_checkinteger(state, 2);
 	user->data.seed(value);
 	return 0;
 }
 
-template <class C> static int discard(lua_State *state)
+template <class Base> static int discard(lua_State *state)
 {
-	auto user = Random<C>::check(state, 1);
-	int number = luaL_checkinteger(state, 2);
-	user->data.discard(number);
+	typedef lux_Type<Base> Type;
+	Type *user = Type::check(state, 1);
+	int value = luaL_checkinteger(state, 2);
+	user->data.discard(value);
 	return 0;
 }
 
-template <class C> luaL_Reg Random<C>::regs[] =
+template <class Base> luaL_Reg Random<Base>::regs[] =
 {
- {"seed", seed<C>}, {"discard", discard<C>}, {nullptr, nullptr}
+ {"seed", seed<Base>}, {"discard", discard<Base>}, {nullptr}
 };
 
 
@@ -277,8 +266,17 @@ template <class C> luaL_Reg Random<C>::regs[] =
 extern "C" int luaopen_random(lua_State *state)
 {
 	lua_newtable(state);
-	Random<std::random_device>::require(state, "device");
-	Random<std::default_random_engine>::require(state, "default_engine");
+	luaL_Reg regs [] =
+	{
+	{"device", Random<std::random_device>::open},
+	{"engine", Random<std::default_random_engine>::open},
+	{nullptr}
+	};
+	for (auto reg=regs; reg->name; reg++)
+	{
+	 luaL_requiref(state, reg->name, reg->func, false);
+	 lua_setfield(state, -2, reg->name);
+	}
 	return 1;
 }
 

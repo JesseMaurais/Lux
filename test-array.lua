@@ -1,6 +1,8 @@
 print('test2: using C arrays for data storage')
 
-a = int(10)
+require'array'
+
+a = int.new(10)
 
 print('object a is ' .. tostring(a))
 
@@ -23,7 +25,7 @@ for i = 0, 4 do
 end
 
 
-c = double(10)
+c = double.new(10)
 
 for i = 0, #c-1 do
 	c[i] = 1/a[i]
@@ -36,7 +38,7 @@ for i = 0, #c-1 do
 end
 
 
-d = char('Hello World!')
+d = char.new('Hello World!')
 
 print('object d is '..tostring(d))
 
@@ -44,7 +46,7 @@ for i = 0, #d-1 do
 	print('d['..i..'] = '..string.char(d[i]))
 end
 
-e = short{7, 10, 6, 14}
+e = short.new{7, 10, 6, 14}
 
 print('object e is '..tostring(e))
 

@@ -1,14 +1,11 @@
 #ifndef __lxthunk__
 #define __lxthunk__
 
-#include "lxalloc.hpp"
 #include "lxstack.hpp"
 #include <exception>
 
-typedef int lux_CFunction(lua_State *state);
-
 // C++ function calling with Lua stack interface using variadic templates
-// there are 4 cases: with/without return value, with/without class object
+// There are 4 cases: with/without return value, with/without class object
 
 template <typename... Args>
  inline int lux_thunk(lua_State *state, void fun(Args...))
@@ -70,30 +67,13 @@ template <typename Res, typename Obj, typename... Args>
 	}
  }
 
-// a special 5th case is that of constructors with arguments
+// Wrap the above thunks in an anonymous function compatible with Lua
 
-template <typename Obj, typename... Args>
- inline int lux_thunk(lua_State *state)
- {
-	typedef lux_Type<Obj> Type;
-	try {
-	register int arg = 0;
-	new (state) Type(new Obj (lux_to<Args>(state, --arg)...), 1);
-	return 1;
-	}
-	catch (std::exception &error)
-	{
-	return luaL_error(state, "C++ exception: %s", error.what());
-	}
- }
-
-// wrap the above thunks in an anonymous function compatible with Lua
 #define lux_wrap(fun) [](lua_State *state)->int{return lux_thunk(state, &fun);}
 
-// cast the wrapped C++ function to a Lua cfunction
+// Cast the wrapped C++ function to Lua's "C" function
+
 #define lux_cast(fun) static_cast<lua_CFunction>(lux_wrap(fun))
 
-// example of how lux_cast can be used anywhere cfunctions are expected
-#define lux_register(state, fun) lua_register(state, #fun, lux_cast(fun))
 
 #endif // file
