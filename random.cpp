@@ -1,40 +1,15 @@
 #include "lux.hpp"
 #include <random>
 
-/*
- * Finds an optional function argument, buried in a table at index arg, and
- * returns it, unless arg is nil or the field name is not in the table, in
- * which case it returns n as a fallback value.
- */
+#define argcheck(state, cond, stack) luaL_argcheck(state, cond, stack, #cond)
 
-static lua_Number opt(lua_State *state, int arg, const char *name, lua_Number n)
-{
-	// is index 'arg' a table?
-	if (lua_istable(state, arg))
-	{
-		// does the table have a numeric field 'name'?
-		if (lua_getfield(state, arg, name) == LUA_TNUMBER)
-		{
-			// copy that number here
-			n = lua_tonumber(state, -1);
-		}
-		// remove the value
-		lua_pop(state, 1);
-	}
-	return n;
-}
-
-/*
- * Base functions for random number generating classes, either genuine random
- * devices or pseudo random engines. 
- */
+// Base functions for random number generating classes
 
 template <class Base> struct Random
 {
-	// globally visible alias
 	typedef lux_Type<Base> Type;
 
-	// create an object of class Base and set its metatable
+	// Create the random number generator
 	static int __new(lua_State *state)
 	{
 		new (state) Type;
@@ -42,7 +17,14 @@ template <class Base> struct Random
 		return 1;
 	}
 
-	// on garbage collection, call object's destructor
+	// String conversion for printing
+	static int __tostring(lua_State *state)
+	{
+		lua_pushfstring(state, "random.%s", Type::name);
+		return 1;
+	}
+
+	// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -50,33 +32,17 @@ template <class Base> struct Random
 		return 0;
 	}
 
-	// for printing the name of this object
-	static int __tostring(lua_State *state)
-	{
-		lua_pushfstring(state, "random.%s", Type::name);
-		return 1;
-	}
-
-	// generate a sequence of random numbers
+	// Generate a sequence of random numbers
 	static int __call(lua_State *state)
 	{
 		auto user = Type::check(state, 1);
-		// if many, store them in a table
+		// If many, store them in a table
 		size_t size = luaL_optinteger(state, 2, 0);
 		if (size)
 		{
-			// user supplied a table?
-			if (lua_gettop(state) < 3)
-			{
-				// put in a new table
-				lua_newtable(state);
-			}
-			else
-			{
-				// put in user's table
-				lua_pushvalue(state, 3);
-			}
-			// generate random numbers in the table
+			// Put into a table
+			lua_newtable(state);
+			// Generate random numbers in the table
 			for (int item = 0; item < size; item++)
 			{
 				lua_pushinteger(state, item);
@@ -87,35 +53,26 @@ template <class Base> struct Random
 		}
 		else
 		{
-			// generate just one number
+			// Generate just one number
 			auto value = user->data();
 			lux_push(state, value);
 		}
 		return 1;
 	}
 
-	// similar to above but following a given probability distribution
+	// Similar to above but following a given distribution
 	template <class Distribution>
-	static int generate(lua_State *state, Distribution &distribution)
+	static int call(lua_State *state, Distribution &distribution)
 	{
 		Type *user = Type::check(state, 1);
-		// if many, store them in a table
-		size_t size = opt(state, 2, "size", 0);
+		// If many, store them in a table
+		size_t size = luaL_optinteger(state, 2, 0);
 		if (size)
 		{
-			// user supplied a table?
-			if (lua_gettop(state) < 4)
-			{
-				// put in a new table
-				lua_newtable(state);
-			}
-			else
-			{
-				// put in user's table
-				lua_pushvalue(state, 4);
-			}
-			// generate random numbers in the table
-			for (int item = 0; item < size; ++item)
+			// Put into a table
+			lua_newtable(state);
+			// Generate random numbers in the table
+			for (int item = 0; item < size; item++)
 			{
 				lua_pushinteger(state, item);
 				auto value = distribution(user->data);
@@ -125,30 +82,173 @@ template <class Base> struct Random
 		}
 		else
 		{
-			// generate just one number
+			// Generate just one number
 			auto value = distribution(user->data);
 			lux_push(state, value);
 		}
 		return 1;
 	}
 
-	// continuous uniform random numbers
 	static int uniform(lua_State *state)
 	{
-		lua_Number a, b;
-		// provided parameter table?
-		if (lua_istable(state, 3))
-		{
-		 a = opt(state, 3, "min", 0.0);
-		 b = opt(state, 3, "max", 1.0);
-		}
-		// probability distribution object
+		auto a = luaL_optnumber(state, 3, 0.0);
+		auto b = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, a < b, 4, "a < b");
+
 		std::uniform_real_distribution<lua_Number> distribution(a, b);
-		// instantiate the generator template function
-		return generate(state, distribution);
+		return call(state, distribution);
 	}
 
-	// device/engine's minimum value
+	static int bernoulli(lua_State *state)
+	{
+		auto p = luaL_optnumber(state, 3, 0.5);
+		luaL_argcheck(state, 0 < p && p < 1, 3, "0 < p < 1");
+
+		std::bernoulli_distribution distribution(p);
+		return call(state, distribution);
+	}
+
+	static int binomial(lua_State *state)
+	{
+		auto n = luaL_optinteger(state, 3, 1);
+		luaL_argcheck(state, n > 0, 3, "n > 0");
+		auto p = luaL_optnumber(state, 4, 0.5);
+		luaL_argcheck(state, 0 < p && p < 1, 3, "0 < p < 1");
+
+		std::binomial_distribution<lua_Integer> distribution(n, p);
+		return call(state, distribution);
+	}
+
+	static int geometric(lua_State *state)
+	{
+		auto p = luaL_optnumber(state, 3, 0.5);
+		luaL_argcheck(state, 0 < p && p < 1, 3, "0 < p < 1");
+
+		std::geometric_distribution<lua_Integer> distribution(p);
+		return call(state, distribution);
+	}
+
+	static int negative_binomial(lua_State *state)
+	{
+		auto k = luaL_optinteger(state, 3, 1);
+		luaL_argcheck(state, k > 0, 3, "k > 0");
+		auto p = luaL_optnumber(state, 4, 0.5);
+		luaL_argcheck(state, 0 < p && p < 1, 4, "0 < p < 1");
+
+		using namespace std;
+		negative_binomial_distribution<lua_Integer> distribution(k, p);
+		return call(state, distribution);
+	}
+
+	static int poisson(lua_State *state)
+	{
+		auto mu = luaL_optinteger(state, 3, 1.0);
+		luaL_argcheck(state, mu > 0, 3, "mu > 0");
+
+		std::poisson_distribution<lua_Integer> distribution(mu);
+		return call(state, distribution);
+	}
+
+	static int exponential(lua_State *state)
+	{
+		auto lambda = luaL_optnumber(state, 3, 1.0);
+		luaL_argcheck(state, lambda > 0, 3, "lambda > 0");
+
+		std::exponential_distribution<lua_Number> distribution(lambda);
+		return call(state, distribution);
+	}
+
+	static int gamma(lua_State *state)
+	{
+		auto alpha = luaL_optnumber(state, 3, 1.0);
+		luaL_argcheck(state, alpha > 0, 3, "alpha > 0");
+		auto beta = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, beta > 0, 4, "beta > 0");
+
+		std::gamma_distribution<lua_Number> distribution(alpha, beta);
+		return call(state, distribution);
+	}
+
+	static int weibull(lua_State *state)
+	{
+		auto a = luaL_optnumber(state, 3, 1.0);
+		luaL_argcheck(state, a > 0, 3, "a > 0");
+		auto b = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, b > 0, 4, "b > 0");
+
+		std::weibull_distribution<lua_Number> distribution(a, b);
+		return call(state, distribution);
+	}
+
+	static int extreme_value(lua_State *state)
+	{
+		auto a = luaL_optnumber(state, 3, 0.0);
+		auto b = luaL_optnumber(state, 4, 1.0);
+
+		std::extreme_value_distribution<lua_Number> distribution(a, b);
+		return call(state, distribution);
+	}
+
+	static int normal(lua_State *state)
+	{
+		auto mu = luaL_optnumber(state, 3, 0.0);
+		auto sigma = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, sigma > 0, 4, "sigma > 0");
+
+		std::normal_distribution<lua_Number> distribution(mu, sigma);
+		return call(state, distribution);
+	}
+
+	static int lognormal(lua_State *state)
+	{
+		auto mu = luaL_optnumber(state, 3, 0.0);
+		auto sigma = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, sigma > 0, 4, "sigma > 0");
+
+		std::lognormal_distribution<lua_Number> distribution(mu, sigma);
+		return call(state, distribution);
+	}
+
+	static int chi_squared(lua_State *state)
+	{
+		auto n = luaL_optinteger(state, 3, 1);
+		luaL_argcheck(state, n > 0, 3, "n > 0");
+
+		std::chi_squared_distribution<lua_Number> distribution(n);
+		return call(state, distribution);
+	}
+
+	static int cauchy(lua_State *state)
+	{
+		auto pos = luaL_optnumber(state, 3, 0.0);
+		auto scale = luaL_optnumber(state, 4, 1.0);
+		luaL_argcheck(state, scale > 0, 4, "scale > 0");
+
+		std::cauchy_distribution<lua_Number> distribution(pos, scale);
+		return call(state, distribution);
+	}
+
+	static int fisher(lua_State *state)
+	{
+		auto m = luaL_optinteger(state, 3, 1);
+		luaL_argcheck(state, m > 0, 3, "m > 0");
+		auto n = luaL_optinteger(state, 4, 1);
+		luaL_argcheck(state, n > 0, 4, "n > 0");
+
+		std::fisher_f_distribution<lua_Number> distribution(m, n);
+		return call(state, distribution);
+	}
+
+	static int student(lua_State *state)
+	{
+		auto n = luaL_optinteger(state, 3, 1);
+		luaL_argcheck(state, n > 0, 3, "n > 0");
+
+		std::student_t_distribution<lua_Number> distribution(n);
+		return call(state, distribution);
+	}
+
+	// Device/Engine's minimum value
 	static int min(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -157,7 +257,7 @@ template <class Base> struct Random
 		return 1;
 	}
 
-	// device/engine's maximum value
+	// Device/Engine's maximum value
 	static int max(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -166,7 +266,7 @@ template <class Base> struct Random
 		return 1;
 	}
 
-	// create and fill a metatable
+	// Create and fill a metatable
 	static int open(lua_State *state)
 	{
 		Type::name = lua_tostring(state, 1);
@@ -195,23 +295,34 @@ template <class Base> struct Random
 		{"min", min},
 		{"max", max},
 		{"uniform", uniform},
-		{nullptr, nullptr}
+		{"bernoulli", bernoulli},
+		{"binomial", binomial},
+		{"geometric", geometric},
+		{"negative", negative_binomial},
+		{"poisson", poisson},
+		{"exponential", exponential},
+		{"gamma", gamma},
+		{"weibull", weibull},
+		{"extreme", extreme_value},
+		{"normal", normal},
+		{"lognormal", lognormal},
+		{"chi_squared", chi_squared},
+		{"cauchy", cauchy},
+		{"fisher", fisher},
+		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
 		luaL_setfuncs(state, common, 0);
 		lua_settable(state, -3);
+
 		return 1;
 	}
 
-	// for sub-classes (see below)
+	// For sub-classes (see below)
 	static luaL_Reg regs[];
 };
 
-
-
-/*
- * Specialized class for genuine random number device
- */
+// Specialized class for genuine random number device
 
 static int entropy(lua_State *state)
 {
@@ -224,14 +335,10 @@ static int entropy(lua_State *state)
 
 template <> luaL_Reg Random<std::random_device>::regs[] =
 {
- {"entropy", entropy}, {nullptr}
+	{"entropy", entropy}, {nullptr}
 };
 
-
-/*
- * Specialized class for pseudo random number engine
- */
-
+// Specialized class for pseudo random number engine
 
 template <class Base> static int seed(lua_State *state)
 {
@@ -253,14 +360,10 @@ template <class Base> static int discard(lua_State *state)
 
 template <class Base> luaL_Reg Random<Base>::regs[] =
 {
- {"seed", seed<Base>}, {"discard", discard<Base>}, {nullptr}
+	{"seed", seed<Base>}, {"discard", discard<Base>}, {nullptr}
 };
 
-
-
-/*
- * Lua module entry point
- */
+// Lua module entry point
 
 extern "C" int luaopen_random(lua_State *state)
 {
@@ -269,6 +372,15 @@ extern "C" int luaopen_random(lua_State *state)
 	{
 	{"device", Random<std::random_device>::open},
 	{"engine", Random<std::default_random_engine>::open},
+	{"minstd_rand", Random<std::minstd_rand>::open},
+	{"minstd_rand0", Random<std::minstd_rand0>::open},
+	{"mt19937", Random<std::mt19937>::open},
+	{"mt19937_64", Random<std::mt19937_64>::open},
+	{"ranlux24_base", Random<std::ranlux24_base>::open},
+	{"ranlux48_base", Random<std::ranlux48_base>::open},
+	{"ranlux24", Random<std::ranlux24>::open},
+	{"ranlux48", Random<std::ranlux48>::open},
+	{"knuth_b", Random<std::knuth_b>::open},
 	{nullptr}
 	};
 	for (auto reg=regs; reg->name; reg++)
