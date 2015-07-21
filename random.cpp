@@ -1,8 +1,6 @@
 #include "lux.hpp"
 #include <random>
 
-#define argcheck(state, cond, stack) luaL_argcheck(state, cond, stack, #cond)
-
 // Base functions for random number generating classes
 
 template <class Base> struct Random
