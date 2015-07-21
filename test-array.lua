@@ -1,6 +1,6 @@
-print('test2: using C arrays for data storage')
+print "Test the use of C arrays for data storage"
 
-require'array'
+require 'array' -- load the array module
 
 a = int.new(10)
 

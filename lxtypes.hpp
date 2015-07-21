@@ -12,7 +12,7 @@ template <class User> struct lux_Store
 
 	lux_Store(void) = default;
 
-	lux_Store(User data)
+	lux_Store(User &data)
 	{
 		this->data = data;
 	}
@@ -74,7 +74,7 @@ template <class User, int Size> struct lux_Store<User[Size]>
 	lux_Store(User *data=nullptr, size_t size=0)
 	{
 		this->data = data;
-		this->size = 0;
+		this->size = 0; // Not owner
 	}
 
 	static const char *name;

@@ -1,6 +1,24 @@
+/*
+ * A dummy module to test various features of the Lux emitter.
+ */
+
+#include <stdexcept>
 #include <cstdlib>
 #include "lux.hpp"
 
+// For testing the basic C function interface and argument passing
+
+static void WriteOut(int one, int two, int three, int four, int five)
+{
+	printf("%d, %d, %d, %d, %d\n", one, two, three, four, five);
+}
+
+// For testing the forwarding of C++ exceptions
+
+static void Except(const char *string)
+{
+	throw std::runtime_error(string);
+}
 
 // Pretend this is the class/struct/union you already have.
 
@@ -31,6 +49,7 @@ struct Account
 	}
 };
 
+// This is the interface you write.
 
 template <> luaL_Reg lux_Class<Account>::regs [] =
 	{
@@ -40,11 +59,15 @@ template <> luaL_Reg lux_Class<Account>::regs [] =
 	{nullptr}
 	};
 
-
-// This is the interface you write.
+// Module entry point
 
 extern "C" int luaopen_test(lua_State *state)
 {
+	// Basic way to register a single function
+	lua_register(state, "WriteOut", lux_cast(WriteOut));
+	// Lua should catch and report errors given here
+	lua_register(state, "Except", lux_cast(Except));
+	// Prefered way to register a class or module
 	luaL_requiref(state, "Account", lux_Class<Account>::open, true);
 	return 1;
 }

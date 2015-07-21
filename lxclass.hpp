@@ -87,6 +87,7 @@ template <class User> struct lux_Class
 	static int member(lua_State *state, Base User::*field)
 	{
 		User *data = lux_to<User*>(state, 1);
+		// Write if argument given
 		if (lua_gettop(state) > 1)
 		{
 		 data->*field = lux_to<Base>(state, 2);

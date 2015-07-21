@@ -1,6 +1,6 @@
-print "test6: exporting of C++ objects"
+print "Test the exporting of C++ class/struct/union to Lua"
 
-require'test'
+require 'test' -- load the "test" module
 
 a = Account.new()
 

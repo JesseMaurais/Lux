@@ -1,54 +1,38 @@
-Wednesday May 28, 2015
+Monday July 20, 2015
 Jesse Maurais
 
 Lux is an emitting C++ glue for Lua. By 'emitting' I mean that it exploits a
 C++ feature in which the compiler emits functions at compile time. This happens
 whenever a templated function recieves a new argument type. Using this feature,
 as well as some C++11 additions, Lux manages to greatly simplify the task of
-exporting C functions, structures, arrays, and C++ classes to the Lua language.
-It is so simple that the user need only learn one function to perform the most
-basic task of exporting any C function.
+exporting C functions, structures, unions, arrays, and C++ classes to the Lua
+language. It is so simple that the user need only learn one function to perform
+the most basic task of exporting any C function.
 
-	lux_register(state, AnyFunction);
+	lua_register(state, "AnyFunction", lux_cast(AnyFunction));
 
-Where "state" is a pointer to a valid lua_State. This function is actually a
-macro for the following
+The lux_cast macro returns a lua_CFunction which is a wrapper for any arbitrary
+C function or C++ class function. 
 
-	#define lux_register(L, fun) lua_register(L, #fun, lux_cast(fun))
-
-The latter being useful if you want Lua to refer to the function by another
-name. The lux_cast macro returns a lua_CFunction which is a wrapper for any
-arbitrary C function or C++ class function. 
-
-	#define lux_wrap(fun) [](lua_State *L) { return lux_thunk(L, &fun); }
-	#define lux_cast(fun) static_cast<lua_CFunction>(lux_wrap(fun))
+	#define lux_cast(fun) [](lua_State *L) { return lux_thunk(L, &fun); }
 
 The above lux_thunk is a dispatching routine responsible for converting the Lua
-stack values to the corrent arguments for "fun" and pushing its return value,
+stack values to the correct arguments for "fun" and pushing its return value,
 if any. This way lux_cast(fun) has the type lua_CFunction and can be used any
 place in Lua's C API that asks for it. For example, you can pass it as the
-CFunction in a luaL_Reg entry before a call to luaL_setfuncs. See test5.cpp
-for an example doing this on a subset of the SDL2 API. The lux_thunk function
-can also take C++ class functions and will pop userdatum for the object, given
-that you have specified the class type and name in a lux_Type specification. 
+CFunction in a luaL_Reg entry before a call to luaL_setfuncs. The lux_thunk
+function can also take C++ class functons provided that they've been specified. 
 
-	template <> const char *lux_Type<YourClass*>::name = "AnyName";
-
-Lux also has several tools to help export your C++ classes. For example, you
-can fill out a lux_Class specification instead of the above.
-
-	template <> const char *lux_Class<YourClass>::name = "AnyName";
-	template <> void lux_Class<YourClass>::setfuncs(lua_State *state)
+template <> luaL_Reg lux_Class<AnyClass>::regs[] = 
 	{
-		luaL_Reg regs [] = {
-			{"foo", lux_cast(YourClass::Bar},
-			// ...
-			{nullptr, nullptr}
-		};
-		luaL_setfuncs(state, regs, 0);
-	}
-	// ... elsewhere
-	lux_Class<YourClass>::open(state);
+	{"SomeMethod", lux_cast(AnyClass::SomeMethod)},
+	// more...
+	{nullptr}
+	};
+
+And then, sometime after having created a Lua state (and for each state).
+
+	luaL_registerf(state, "AnyClass", lux_Class<AnyClass>::open, true);
 
 Aside from classes, Lux can also give Lua access to C style arrays and will
 allow for dealing with memory blocks in a similar way as structs and unions.
@@ -65,10 +49,10 @@ compiler itself when the C++ source code is processed.
 
 Effectively, you don't have to maintain or manually edit the code for interface
 changes. The C++ compiler already does this. That is to say, when you change
-the arity (number of arguments) to AnyFunction or YourClass::Bar, or you simply
-change the type of one or more of its arguments, you don't have to change the
-specifications, because they don't involve such details. All changes are
-reflected in the Lua interface when the C++ compiler fills out the template
+the arity (number of arguments) to AnyFunction or AnyClass::SomeMethod or you
+simply change the type of one or more of its arguments, you don't have to
+change the specifications, because they don't involve such details. All changes
+are reflected in the Lua interface when the C++ compiler fills out the template
 specifications the next time you build your code.
 
 The name Lux was chosen from the word of the same spelling. It is the SI unit
