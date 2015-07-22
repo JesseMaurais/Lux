@@ -5,7 +5,7 @@ SRC=lux.cpp lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
 all: liblux.so
 
 clean:
-	rm liblux.so array.so random.so test.so
+	rm *.so
 
 install: liblux.so $(SRC)
 	cp liblux.so /usr/local/lib
@@ -19,6 +19,15 @@ uninstall:
 
 liblux.so: $(SRC)
 	$(CC) $(CFLAGS) -shared -o liblux.so -fpic lux.cpp
+
+cstdio: $(SRC) cstdio.cpp
+	$(CC) $(CFLAGS) -shared -o cstdio.so -fpic cstdio.cpp -llux
+
+cstring: $(SRC) cstring.cpp
+	$(CC) $(CFLAGS) -shared -o cstring.so -fpic cstring.cpp -llux
+
+unistd: $(SRC) unistd.cpp
+	$(CC) $(CFLAGS) -shared -o unistd.so -fpic unistd.cpp -llux
 
 random: $(SRC) random.cpp
 	$(CC) $(CFLAGS) -shared -o random.so -fpic random.cpp -llux
