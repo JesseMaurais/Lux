@@ -1,11 +1,12 @@
 CC=g++
 CFLAGS=-std=c++11
-SRC=lux.cpp lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
+SRC=lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
+OBJ=liblux.so array.so cstdlib.so cstdio.so cstring.so fenv.so unistd.so random.so thread.so mutex.so
 
-all: liblux.so
+all: $(OBJ)
 
 clean:
-	rm *.so
+	rm $(OBJ)
 
 install: liblux.so $(SRC)
 	cp liblux.so /usr/local/lib
@@ -17,24 +18,18 @@ uninstall:
 	rmdir /usr/local/include/lux
 	rm /usr/local/lib/liblux.so
 
-liblux.so: $(SRC)
-	$(CC) $(CFLAGS) -shared -o liblux.so -fpic lux.cpp
+liblux.so: lux.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
 
-cstdio: $(SRC) cstdio.cpp
-	$(CC) $(CFLAGS) -shared -o cstdio.so -fpic cstdio.cpp -llux
+thread.so: thread.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -pthread
 
-cstring: $(SRC) cstring.cpp
-	$(CC) $(CFLAGS) -shared -o cstring.so -fpic cstring.cpp -llux
+mutex.so: mutex.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -pthread
 
-unistd: $(SRC) unistd.cpp
-	$(CC) $(CFLAGS) -shared -o unistd.so -fpic unistd.cpp -llux
+fenv.so: fenv.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lm
 
-random: $(SRC) random.cpp
-	$(CC) $(CFLAGS) -shared -o random.so -fpic random.cpp -llux
-
-array: $(SRC) array.cpp
-	$(CC) $(CFLAGS) -shared -o array.so -fpic array.cpp -llux
-
-test: $(SRC) test.cpp
-	$(CC) $(CFLAGS) -shared -o test.so -fpic test.cpp -llux
+%.so: %.cpp $(SRC) liblux.so
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux
 

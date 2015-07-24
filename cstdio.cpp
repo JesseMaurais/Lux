@@ -3,7 +3,7 @@
 
 #define REG(fun) {#fun, lux_cast(fun)},
 
-extern "C" int luaopen_stdio(lua_State *state)
+extern "C" int luaopen_cstdio(lua_State *state)
 {
 	luaL_Reg regs [] =
 	{
@@ -72,13 +72,19 @@ extern "C" int luaopen_stdio(lua_State *state)
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
-	// Standard FILEs
+	// Standard FILE Streams
+	lux_Type<FILE*>::name = "FILE";
+	luaL_newmetatable(state, "FILE");
+	lua_pop(state, 1);
 	lux_push(state, stderr);
 	lua_setfield(state, -2, "stderr");
+	luaL_setmetatable(state, "FILE");
 	lux_push(state, stdin);
 	lua_setfield(state, -2, "stdin");
+	luaL_setmetatable(state, "FILE");
 	lux_push(state, stdout);
 	lua_setfield(state, -2, "stdout");
+	luaL_setmetatable(state, "FILE");
 	// Constants
 	lux_push(state, FILENAME_MAX);
 	lua_setfield(state, -2, "FILENAME_MAX");

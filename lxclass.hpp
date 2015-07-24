@@ -130,19 +130,22 @@ template <class User> struct lux_Class
 		lua_pushcfunction(state, __tostring);
 		lua_settable(state, -3);
 
+		if (index->name)
+		{
 		lua_pushliteral(state, "__index");
-		luaL_newlib(state, regs);
+		luaL_newlib(state, index);
 		lua_settable(state, -3);
+		}
 
 		return 1;
 	}
 
-	static luaL_Reg regs[];
+	static luaL_Reg index[];
 };
 
 // Assume empty unless user specifies otherwise
 
-template <class User> luaL_Reg lux_Class<User>::regs [] = {{nullptr}};
+template <class User> luaL_Reg lux_Class<User>::index [] = {{nullptr}};
 
 // Wrap a member accessor in an anonymous function compatible with Lua
 

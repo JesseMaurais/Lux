@@ -6,8 +6,8 @@ C++ feature in which the compiler emits functions at compile time. This happens
 whenever a templated function recieves a new argument type. Using this feature,
 as well as some C++11 additions, Lux manages to greatly simplify the task of
 exporting C functions, structures, unions, arrays, and C++ classes to the Lua
-language. It is so simple that the user need only learn one function to perform
-the most basic task of exporting any C function.
+language. It is so simple that the user need only learn one thing to perform the
+most basic task of exporting any C function.
 
 	lua_register(state, "AnyFunction", lux_cast(AnyFunction));
 
@@ -21,7 +21,7 @@ stack values to the correct arguments for "fun" and pushing its return value,
 if any. This way lux_cast(fun) has the type lua_CFunction and can be used any
 place in Lua's C API that asks for it. For example, you can pass it as the
 CFunction in a luaL_Reg entry before a call to luaL_setfuncs. The lux_thunk
-function can also take C++ class functons provided that they've been specified. 
+function can also take C++ class functions provided that they've been specified.
 
 template <> luaL_Reg lux_Class<AnyClass>::regs[] = 
 	{
