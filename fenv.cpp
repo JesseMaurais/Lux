@@ -4,7 +4,8 @@
 
 extern "C" int luaopen_fenv(lua_State *state)
 {
-	luaL_requiref(state, "fenv", lux_Class<fenv_t>::open, true);
+	luaL_requiref(state, "fenv", lux_Class<fenv_t>::open, false);
+
 	luaL_Reg regs[] =
 	{
 	{"clear", lux_cast(feclearexcept)},
@@ -21,11 +22,8 @@ extern "C" int luaopen_fenv(lua_State *state)
 	{nullptr}
 	};
 	luaL_setfuncs(state, regs, 0);
-	struct {
-	 const char *name;
-	 lua_Integer value;
-	}
-	args[] =
+
+	lux_Reg<lua_Integer> args[] =
 	{
 	{"DIVBYZERO", FE_DIVBYZERO},
 	{"INEXACT", FE_INEXACT},
@@ -37,7 +35,6 @@ extern "C" int luaopen_fenv(lua_State *state)
 	{"TONEAREST", FE_TONEAREST},
 	{"TOWARDZERO", FE_TOWARDZERO},
 	{"UPWARD", FE_UPWARD},
-	// cfloat
 	{"RADIX", FLT_RADIX},
 	{"ROUNDS", FLT_ROUNDS},
 	{"EVAL_METHOD", FLT_EVAL_METHOD},
@@ -62,17 +59,20 @@ extern "C" int luaopen_fenv(lua_State *state)
 	{"LDBL_MAX_10_EXP", LDBL_MAX_10_EXP},
 	{nullptr}
 	};
-	for (auto r=args; r->name; ++r)
+	lux_setregs(state, args);
+
+	lux_Reg<lua_Number> glbs[] =
 	{
-	 lua_pushinteger(state, r->value);
-	 lua_setfield(state, -2, r->name);
-	}
-	lux_push(state, FLT_EPSILON);
-	lua_setfield(state, -2, "FLT_EPSILON");
-	lux_push(state, DBL_EPSILON);
-	lua_setfield(state, -2, "DBL_EPSILON");
-	lux_push(state, LDBL_EPSILON);
-	lua_setfield(state, -2, "LDBL_EPSILON");
+	{"FLT_EPSILON", FLT_EPSILON},
+	{"DBL_EPSILON", DBL_EPSILON},
+	{"LDBL_EPSILON", LDBL_EPSILON},
+	{nullptr}
+	};
+	lux_setregs(state, glbs);
+
+	lux_push(state, FE_DFL_ENV);
+	lua_setfield(state, -2, "DFL");
+
 	return 1;
 }
 

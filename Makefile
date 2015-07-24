@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-std=c++11
 SRC=lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
-OBJ=liblux.so array.so cstdlib.so cstdio.so cstring.so fenv.so unistd.so random.so thread.so mutex.so
+OBJ=liblux.so array.so cstdlib.so cstdio.so cstring.so csignal.so fenv.so unistd.so random.so thread.so mutex.so
 
 all: $(OBJ)
 

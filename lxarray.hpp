@@ -144,7 +144,6 @@ template <class User> struct lux_Array
 	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
-		Type::name = luaL_checkstring(state, 1);
 		luaL_newmetatable(state, Type::name);
 		luaL_Reg regs [] =
 		{
