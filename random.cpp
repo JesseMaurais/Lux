@@ -5,7 +5,7 @@
 
 template <class Base> struct Random
 {
-	typedef lux_Type<Base> Type;
+	typedef lux_Store<Base> Type;
 
 	// Create the random number generator
 	static int __new(lua_State *state)
@@ -288,7 +288,7 @@ template <class Base> struct Random
 
 		lua_pushliteral(state, "__index");
 		lua_newtable(state);
-		luaL_Reg common [] =
+		luaL_Reg index[] =
 		{
 		{"min", min},
 		{"max", max},
@@ -310,7 +310,7 @@ template <class Base> struct Random
 		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
-		luaL_setfuncs(state, common, 0);
+		luaL_setfuncs(state, index, 0);
 		lua_settable(state, -3);
 
 		return 1;
@@ -324,7 +324,7 @@ template <class Base> struct Random
 
 static int entropy(lua_State *state)
 {
-	typedef lux_Type<std::random_device> Type;
+	typedef lux_Store<std::random_device> Type;
 	Type *user = Type::check(state);
 	auto value = user->data.entropy();
 	lux_push(state, value);
@@ -340,7 +340,7 @@ template <> luaL_Reg Random<std::random_device>::regs[] =
 
 template <class Base> static int seed(lua_State *state)
 {
-	typedef lux_Type<Base> Type;
+	typedef lux_Store<Base> Type;
 	Type *user = Type::check(state, 1);
 	int value = luaL_checkinteger(state, 2);
 	user->data.seed(value);
@@ -349,7 +349,7 @@ template <class Base> static int seed(lua_State *state)
 
 template <class Base> static int discard(lua_State *state)
 {
-	typedef lux_Type<Base> Type;
+	typedef lux_Store<Base> Type;
 	Type *user = Type::check(state, 1);
 	int value = luaL_checkinteger(state, 2);
 	user->data.discard(value);

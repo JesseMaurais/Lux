@@ -1,7 +1,7 @@
 #include "lux.hpp"
 #include <thread>
 
-typedef lux_Type<std::thread> Type;
+typedef lux_Store<std::thread> Type;
 
 static void call(lua_State *state)
 {

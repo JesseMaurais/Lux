@@ -1,15 +1,17 @@
 #ifndef __lxarray__
 #define __lxarray__
 
-#include "lxtypes.hpp"
+#include "lxalloc.hpp"
+#include "lxstore.hpp"
 #include "lxstack.hpp"
+#include "lxbuffs.hpp"
 
 // Emulate C arrays/pointers in Lua
 
 template <class User> struct lux_Array
 {
-	// Pointer implementation
-	typedef lux_Type<User*> Type;
+	// Pointer storage implementation
+	typedef lux_Store<User*> Type;
 
 	// Array allocation function
 	static int __new(lua_State *state)
@@ -28,15 +30,6 @@ template <class User> struct lux_Array
 		  case LUA_TNUMBER:
 			size = lux_to<int>(state, 1);
 			data = new User [size];
-			break;
-		  case LUA_TSTRING:
-			string = luaL_tolstring(state, 1, &size);
-			data = new User [size+1];
-			data[size] = '\0';
-			for (int it = 0; it < size; ++it)
-			{
-			 data[it] = string[it];
-			}
 			break;
 		  case LUA_TTABLE:
 		  case LUA_TUSERDATA:
@@ -69,7 +62,23 @@ template <class User> struct lux_Array
 	// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
-		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
+		Type *user = Type::check(state);
+		const char *sep = nullptr;
+		// Build up a string
+		lux_Buffer buffer(state);
+		buffer.addchar('{');
+		// Iterate over each item in the array
+		for (auto item = 0; item < user->size; ++item)
+		{
+			// Add separator after first
+			if (sep) buffer.addstring(sep);
+			else sep = ", ";
+			// Convert each element to string
+			lux_push(state, user->data[item]);
+			buffer.addvalue();
+		}
+		buffer.addchar('}');
+		buffer.push();
 		return 1;
 	}
 

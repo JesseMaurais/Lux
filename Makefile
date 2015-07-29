@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-std=c++11
 SRC=lxalloc.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp
-OBJ=liblux.so array.so cstdlib.so cstdio.so cstring.so csignal.so fenv.so unistd.so random.so thread.so mutex.so
+OBJ=liblux.so array.so cstdlib.so cstdio.so cstring.so csignal.so cfenv.so unistd.so random.so thread.so mutex.so test.so
 
 all: $(OBJ)
 
@@ -27,7 +27,7 @@ thread.so: thread.cpp $(SRC)
 mutex.so: mutex.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -pthread
 
-fenv.so: fenv.cpp $(SRC)
+cfenv.so: cfenv.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lm
 
 %.so: %.cpp $(SRC) liblux.so

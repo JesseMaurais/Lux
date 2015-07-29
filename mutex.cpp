@@ -1,7 +1,7 @@
 #include "lux.hpp"
 #include <mutex>
 
-typedef lux_Type<std::mutex> Type;
+typedef lux_Store<std::mutex> Type;
 
 static int __new(lua_State *state)
 {

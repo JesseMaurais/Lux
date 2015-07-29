@@ -2,7 +2,7 @@
 #include <cfloat>
 #include <cfenv>
 
-extern "C" int luaopen_fenv(lua_State *state)
+extern "C" int luaopen_cfenv(lua_State *state)
 {
 	luaL_requiref(state, "fenv", lux_Class<fenv_t>::open, false);
 
@@ -59,16 +59,16 @@ extern "C" int luaopen_fenv(lua_State *state)
 	{"LDBL_MAX_10_EXP", LDBL_MAX_10_EXP},
 	{nullptr}
 	};
-	lux_setregs(state, args);
+	lux_settable(state, args);
 
-	lux_Reg<lua_Number> glbs[] =
+	lux_Reg<lua_Number> vars[] =
 	{
 	{"FLT_EPSILON", FLT_EPSILON},
 	{"DBL_EPSILON", DBL_EPSILON},
 	{"LDBL_EPSILON", LDBL_EPSILON},
 	{nullptr}
 	};
-	lux_setregs(state, glbs);
+	lux_settable(state, vars);
 
 	lux_push(state, FE_DFL_ENV);
 	lua_setfield(state, -2, "DFL");

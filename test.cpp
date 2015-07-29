@@ -51,7 +51,7 @@ struct Account
 
 // This is the interface you write.
 
-template <> luaL_Reg lux_Class<Account>::regs [] =
+template <> luaL_Reg lux_Class<Account>::index[] =
 	{
 	{"Withdrawl", lux_method(Account, Withdrawl)},
 	{"Deposit", lux_method(Account, Deposit)},

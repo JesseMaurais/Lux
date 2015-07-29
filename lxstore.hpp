@@ -1,95 +1,73 @@
-#ifndef __lxtypes__
-#define __lxtypes__
+#ifndef __lxstore__
+#define __lxstore__
 
 #include "lxalloc.hpp"
 #include <typeinfo>
 
+// Metadata for type system
+
+template <class User> struct lux_Type
+{
+	static const char *name;
+};
+
+template <class User> const char *lux_Type<User>::name = typeid(User).name();
+
 // The base case
 
-template <class User> struct lux_Store
+template <class User> struct lux_Pack : lux_Type<User>
 {
 	User data;
 
-	lux_Store(void) = default;
+	lux_Pack(void) = default;
 
-	lux_Store(User &data)
+	lux_Pack(User &data)
 	{
 		this->data = data;
 	}
-
-	static const char *name;
 };
-
-template <class User>
-	const char *lux_Store<User>::name = typeid(User).name();
-
 
 // The pointer case
 
-template <class User> struct lux_Store<User*>
+template <class User> struct lux_Pack<User*> : lux_Type<User*>
 {
 	User *data;
 	size_t size;
 
-	lux_Store(User *data=nullptr, size_t size=0)
+	lux_Pack(User *data=nullptr, size_t size=0)
 	{
 		this->data = data;
 		this->size = size;
 	}
-
-	static const char *name;
 };
-
-template <class User>
-	const char *lux_Store<User*>::name = typeid(User*).name();
-
 
 // The const pointer case
 
-template <class User> struct lux_Store<const User*>
+template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 {
-	const User *data;
-	size_t size;
-
-	lux_Store(const User *data=nullptr, size_t size=0)
+	lux_Pack(const User *data=nullptr, size_t size=0)
 	{
-		this->data = data;
+		this->data = const_cast<User*>(data);
 		this->size = size;
 	}
-
-	static const char *name;
 };
-
-template <class User>
-	const char *lux_Store<const User*>::name = lux_Store<User*>::name;
-
 
 // The fixed sized array case
 
-template <class User, int Size> struct lux_Store<User[Size]>
+template <class User, int Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
 {
-	User *data;
-	size_t size;
-	
-	lux_Store(User *data=nullptr, size_t size=0)
+	lux_Pack(User *data=nullptr)
 	{
 		this->data = data;
 		this->size = 0; // Not owner
 	}
-
-	static const char *name;
 };
-
-template <class User, int Size>
-	const char *lux_Store<User[Size]>::name = lux_Store<User*>::name;
-
 
 // Basic stack operations for userdata
 
-template <class User> struct lux_Type : lux_Store<User>
+template <class User> struct lux_Store : lux_Pack<User>
 {
-	typedef lux_Type<User> Type;
-	using lux_Store<User>::lux_Store;
+	typedef lux_Store<User> Type;
 
 	static Type *check(lua_State *state, int stack=1)
 	{
@@ -120,14 +98,15 @@ template <class User> struct lux_Type : lux_Store<User>
 	{
 		return check(state, stack)->data;
 	}
+
+	using lux_Pack<User>::lux_Pack;
 };
 
 // Specialize for pointers -- convert between nullptr/nil
 
-template <class User> struct lux_Type<User*> : lux_Store<User*>
+template <class User> struct lux_Store<User*> : lux_Pack<User*>
 {
-	typedef lux_Type<User*> Type;
-	using lux_Store<User*>::lux_Store;
+	typedef lux_Store<User*> Type;
 
 	static Type *check(lua_State *state, int stack=1)
 	{
@@ -161,8 +140,9 @@ template <class User> struct lux_Type<User*> : lux_Store<User*>
 		if (lua_isnil(state, stack)) return nullptr;
 		return check(state, stack)->data;
 	}
-};
 
+	using lux_Pack<User*>::lux_Pack;
+};
 
 #endif // file
 

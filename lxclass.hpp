@@ -2,13 +2,15 @@
 #define __lxclass__
 
 #include "lxalloc.hpp"
+#include "lxstore.hpp"
 #include "lxstack.hpp"
 
 // Export C++ class/struct/union to Lua
 
 template <class User> struct lux_Class
 {
-	typedef lux_Type<User*> Type;
+	// Pointer storage implementation
+	typedef lux_Store<User*> Type;
 
 	// Array allocation function
 	static int __new(lua_State *state)

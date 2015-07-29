@@ -3,25 +3,6 @@
 
 #include "lxstack.hpp"
 
-// Similar to luaL_Reg but for all classes for which lux_push is defined
-
-template <class Base> struct lux_Reg
-{
-	const char *name;
-	Base value;
-};
-
-template <class Base>
-void lux_settable(lua_State *state, const lux_Reg<Base> regs[])
-{
-	for (auto r=regs; r->name; ++r)
-	{
-		lua_pushstring(state, r->name);
-		lux_push<Base>(state, r->value);
-		lua_settable(state, -3);
-	}
-}
-
 // To set or get data members from a field in a table at stack index
 
 template <class User>
@@ -40,6 +21,25 @@ User lux_getfield(lua_State *state, int stack, const char *key)
 	return data;
 }
 
+// Similar to luaL_Reg but for all classes for which lux_push is defined
+
+template <class User> struct lux_Reg
+{
+	const char *name;
+	User value;
+};
+
+template <class User>
+void lux_settable(lua_State *state, const lux_Reg<User> regs[])
+{
+	for (auto r=regs; r->name; ++r)
+	{
+		lua_pushstring(state, r->name);
+		lux_push(state, r->value);
+		lua_settable(state, -3);
+	}
+}
+
 // Shorthand for manipulating tables as C function arguments
 
 struct lux_Table
@@ -55,12 +55,12 @@ struct lux_Table
 
 	template <class User> void set(const char *key, User data)
 	{
-		lux_setfield(state, stack, key, data);
+		lux_setfield<User>(state, stack, key, data);
 	}
 
-	template <class user> User get(const char *key)
+	template <class User> User get(const char *key)
 	{
-		return lux_getfield(state, stack, key);
+		return lux_getfield<User>(state, stack, key);
 	}
 };
 

@@ -1,7 +1,7 @@
 #ifndef __lxstack__
 #define __lxstack__
 
-#include "lxtypes.hpp"
+#include "lxstore.hpp"
 
 // Print entire stack to stdout
 
@@ -22,7 +22,7 @@ int lux_push(lua_State *state, User data, Args... args)
 template <class User> inline
 void lux_push(lua_State *state, User data)
 {
-	typedef lux_Type<User> Type;
+	typedef lux_Store<User> Type;
 	(void) Type::push(state, data);
 	luaL_setmetatable(state, Type::name);
 }
@@ -32,7 +32,7 @@ void lux_push(lua_State *state, User data)
 template <class User> inline
 User lux_to(lua_State *state, int stack)
 {
-	typedef lux_Type<User> Type;
+	typedef lux_Store<User> Type;
 	return Type::to(state, stack);
 }
 
@@ -224,7 +224,7 @@ const char *lux_to<const char *>(lua_State *state, int stack)
 	{
 		return lua_tostring(state, stack);
 	}
-	typedef lux_Type<char*> Type;
+	typedef lux_Store<char*> Type;
 	return Type::to(state, stack);
 }
 
