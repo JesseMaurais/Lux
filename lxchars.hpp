@@ -17,48 +17,48 @@ struct lux_Chars : mbstate_t
 
 	void reset(void)
 	{
-		memset(this, 0, sizeof(mbstate_t));
+		(void) memset(this, 0, sizeof(mbstate_t));
 	}
 
 	// Character length in bytes
 
-	size_t len(const char *str, size_t max = MB_CUR_MAX)
+	ssize_t length(const char *str, size_t max = MB_CUR_MAX)
 	{
 		return mbrlen(str, max, this);
 	}
 
 	// Char conversion for wide-char
 
-	size_t to(char *dst, wchar_t src)
+	ssize_t tochar(char *dst, wchar_t src)
 	{
 		return wcrtomb(dst, src, this);
 	}
 
-	size_t to(wchar_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	ssize_t tochar(wchar_t *dst, const char *src, size_t max = MB_CUR_MAX)
 	{
 		return mbrtowc(dst, src, max, this);
 	}
 
 	// Char conversion for UTF-16
 
-	size_t to(char *dst, char16_t src)
+	ssize_t tochar(char *dst, char16_t src)
 	{
 		return c16rtomb(dst, src, this);
 	}
 
-	size_t to(char16_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	ssize_t tochar(char16_t *dst, const char *src, size_t max = MB_CUR_MAX)
 	{
 		return mbrtoc16(dst, src, max, this);
 	}
 
 	// Char conversion for UTF-32
 
-	size_t to(char *dst, char32_t src)
+	ssize_t tochar(char *dst, char32_t src)
 	{
 		return c32rtomb(dst, src, this);
 	}
 
-	size_t to(char32_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	ssize_t tochar(char32_t *dst, const char *src, size_t max = MB_CUR_MAX)
 	{
 		return mbrtoc32(dst, src, max, this);
 	}
@@ -66,32 +66,86 @@ struct lux_Chars : mbstate_t
 	// String conversion
 
 	template <class Char>
-	size_t to(char *dst, const Char *src)
+	ssize_t tostring(char *dst, const Char *src, size_t len)
 	{
 		char str[MB_CUR_MAX];
-		size_t size;
-		while (*src)
+		ssize_t sz;
+		size_t n;
+		for (n = 0; n < len and src[n]; ++n)
 		{
-			size = to(str, dst);
-			strncpy(dst, str, size);
-			dst += size;
-			src ++;
+			sz = tochar(str, src[n]);
+			if (sz < 0) return sz;
+			strncpy(dst, str, sz);
+			dst += sz;
 		}
+		return n;
 	}
 
 	template <class Char>
-	size_t to(Char *dst, const char *src)
+	ssize_t tostring(Char *dst, const char *src, size_t len)
 	{
-		size_t size;
-		while (*src)
+		ssize_t sz;
+		size_t n;
+		for (n = 0; n < len && src[n]; n += sz, dst++)
 		{
-			size = to(dst, src);
-			src += size;
-			dst ++;
+			sz = tochar(dst, src + n, len - n);
+			if (sz < 0) return sz;
 		}
+		return n;
 	}
+
+	// Generic string conversion
+
+	template <class Char>
+	ssize_t to(char *dst, const Char *src, size_t len)
+	{
+		return _to<Char, sizeof(Char)>(dst, src, len);
+	}
+
+	template <class Char>
+	ssize_t to(Char *dst, const char *src, size_t len)
+	{
+		return _to<Char, sizeof(Char)>(dst, src, len);
+	}
+
+ private:
+
+	// Generic string conversion with char class size
+
+	template <class Char, size_t Size>
+	ssize_t _to(char *dst, const Char *src, size_t len);
+
+	template <class Char, size_t Size>
+	ssize_t _to(Char *dst, const char *src, size_t len);
 };
 
+// Generic 16-bit string conversion
+
+template <class Char>
+ssize_t lux_Chars::_to<Char, sizeof(char16_t)>(char *dst, const Char *src, size_t len)
+{
+	return lux_Chars::tostring(dst, (const char16_t *) src, len);
+}
+
+template <class Char>
+ssize_t lux_Chars::_to<Char, sizeof(char16_t)>(Char *dst, const char *src, size_t len)
+{
+	return lux_Chars::tostring((char16_t *) dst, src, len);
+}
+
+// Generic 32-bit string conversion
+
+template <class Char>
+ssize_t lux_Chars::_to<Char, sizeof(char32_t)>(char *dst, const Char *src, size_t len)
+{
+	return lux_Chars::tostring(dst, (const char32_t *) src, len);
+}
+
+template <class Char>
+ssize_t lux_Chars::_to<Char, sizeof(char32_t)>(Char *dst, const char *src, size_t len)
+{
+	return lux_Chars::tostring((char32_t *) dst, str, len);
+}
 
 #endif // file
 
