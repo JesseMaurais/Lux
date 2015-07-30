@@ -5,19 +5,19 @@ uni = require'unistd'
 io = require'cstdio'
 std = require'cstdlib'
 
-path = char.new(io.FILENAME_MAX)
+str = char.new(io.FILENAME_MAX)
 
-uni.confstr(uni._CS_PATH, path, #path)
+uni.confstr(uni._CS_PATH, str, #str)
 print "The system search path is "
-io.puts(path)
+io.puts(str)
 
-uni.getlogin_r(path, #path)
+uni.getlogin_r(str, #str)
 print "The current user is "
-io.puts(path)
+io.puts(str)
 
-uni.getcwd(path, #path)
+uni.getcwd(str, #str)
 print "The current working directory is "
-io.puts(path)
+io.puts(str)
 
 home = std.getenv('HOME')
 print "The user's home directory is "
@@ -28,18 +28,18 @@ if uni.chdir(home) < 0 then
 	io.perror('chdir')
 else
 	print "Changing back to working directory"
-	if uni.chdir(path) < 0 then
+	if uni.chdir(str) < 0 then
 		io.perror('chdir')
 	end
 end
 
 if uni.isatty(uni.STDIN_FILENO) > 0 then
-	uni.ttyname_r(uni.STDIN_FILENO, path, #path)
+	uni.ttyname_r(uni.STDIN_FILENO, str, #str)
 	print "Execution occuring within a terminal with name "
-	io.puts(path)
+	io.puts(str)
 else
 	-- How else would you see this message?
-	print "Execution not withing a terminal"
+	print "Execution not within a terminal"
 end
 
 print "Sounding the alarm in 2 seconds"

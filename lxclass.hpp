@@ -105,6 +105,7 @@ template <class User> struct lux_Class
 	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
+		Type::name = lua_tostring(state, +1);
 		luaL_newmetatable(state, Type::name);
 
 		lua_pushliteral(state, "new");
