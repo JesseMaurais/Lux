@@ -6,7 +6,7 @@
 
 extern "C" int luaopen_unistd(lua_State *state)
 {
-	luaL_Reg regs [] =
+	luaL_Reg regs[] =
 	{
 	REG(access)
 	REG(alarm)
@@ -93,11 +93,8 @@ extern "C" int luaopen_unistd(lua_State *state)
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
-	struct {
-	 const char *name;
-	 lua_Integer value;
-	}
-	args [] =
+
+	lux_Reg<lua_Integer> args[] =
 	{
 	// access
 	ARG(R_OK)
@@ -139,10 +136,7 @@ extern "C" int luaopen_unistd(lua_State *state)
 	ARG(STDOUT_FILENO)
 	{nullptr}
 	};
-	for (auto r=args; r->name; r++)
-	{
-	 lua_pushinteger(state, r->value);
-	 lua_setfield(state, -2, r->name);
-	}
+	lux_settable(state, args);
+
 	return 1;
 }

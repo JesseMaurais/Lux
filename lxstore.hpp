@@ -137,7 +137,7 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 
 	static User *to(lua_State *state, int stack=1)
 	{
-		if (lua_isnil(state, stack)) return nullptr;
+		if (lua_isnoneornil(state, stack)) return nullptr;
 		return check(state, stack)->data;
 	}
 

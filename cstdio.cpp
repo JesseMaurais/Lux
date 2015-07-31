@@ -5,7 +5,11 @@
 
 extern "C" int luaopen_cstdio(lua_State *state)
 {
-	luaL_Reg regs [] =
+	typedef lux_Store<FILE*> Type;
+	luaL_newmetatable(state, Type::name = "FILE");
+	lua_pop(state, 1);
+
+	luaL_Reg regs[] =
 	{
 	REG(clearerr)
 	REG(ctermid)
@@ -72,29 +76,26 @@ extern "C" int luaopen_cstdio(lua_State *state)
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
-	// Standard FILE Streams
-	lux_Type<FILE*>::name = "FILE";
-	luaL_newmetatable(state, "FILE");
-	lua_pop(state, 1);
-	lux_push(state, stderr);
-	lua_setfield(state, -2, "stderr");
-	luaL_setmetatable(state, "FILE");
-	lux_push(state, stdin);
-	lua_setfield(state, -2, "stdin");
-	luaL_setmetatable(state, "FILE");
-	lux_push(state, stdout);
-	lua_setfield(state, -2, "stdout");
-	luaL_setmetatable(state, "FILE");
-	// Constants
-	lux_push(state, FILENAME_MAX);
-	lua_setfield(state, -2, "FILENAME_MAX");
-	lux_push(state, FOPEN_MAX);
-	lua_setfield(state, -2, "FOPEN_MAX");
-	lux_push(state, BUFSIZ);
-	lua_setfield(state, -2, "BUFSIZ");
-	lux_push(state, EOF);
-	lua_setfield(state, -2, "EOF");
-	// table
+
+	lux_Reg<lua_Integer> args[] =
+	{
+	{"FILENAME_MAX", FILENAME_MAX},
+	{"FOPEN_MAX", FOPEN_MAX},
+	{"BUFSIZ", BUFSIZ},
+	{"EOF", EOF},
+	{nullptr}
+	};
+	lux_settable(state, args);
+
+	lux_Reg<FILE*> ios[] =
+	{
+	{"stderr", stderr},
+	{"stdin", stdin},
+	{"stdout", stdout},
+	{nullptr}
+	};
+	lux_settable(state, ios);
+
 	return 1;
 }
 

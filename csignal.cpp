@@ -33,12 +33,14 @@ extern "C" int luaopen_csignal(lua_State *state)
 	};
 	lux_settable(state, args);
 
-	lux_push(state, SIG_DFL);
-	lua_setfield(state, -2, "DFL");
-	lux_push(state, SIG_IGN);
-	lua_setfield(state, -2, "IGN");
-	lux_push(state, SIG_ERR);
-	lua_setfield(state, -2, "ERR");
+	lux_Reg<sighandler_t> sigs[] =
+	{
+	{"DFL", SIG_DFL},
+	{"IGN", SIG_IGN},
+	{"ERR", SIG_ERR},
+	{nullptr}
+	};
+	lux_settable(state, sigs);
 
 	return 1;
 }

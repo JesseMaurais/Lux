@@ -2,7 +2,7 @@
 #include <ctime>
 
 template <> luaL_Reg lux_Class<tm>::index[] =
-	{
+{
 	{"tm_sec", lux_member(tm, tm_sec)},
 	{"tm_min", lux_member(tm, tm_min)},
 	{"tm_hour", lux_member(tm, tm_hour)},
@@ -13,11 +13,10 @@ template <> luaL_Reg lux_Class<tm>::index[] =
 	{"tm_yday", lux_member(tm, tm_yday)},
 	{"tm_isdst", lux_member(tm, tm_isdst)},
 	{nullptr}
-	};
+};
 
 extern "C" int luaopen_ctime(lua_State *state)
 {
-	lux_stackdump(state);
 	luaL_requiref(state, "tm", lux_Class<tm>::open, false);
 	luaL_Reg regs[] =
 	{

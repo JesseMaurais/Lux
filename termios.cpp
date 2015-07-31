@@ -11,7 +11,7 @@ static int c_cc(lua_State *state)
 }
 
 template <> luaL_Reg lux_Class<termios>::index[] =
-	{
+{
 	{"c_iflag", lux_member(termios, c_iflag)},
 	{"c_oflag", lux_member(termios, c_oflag)},
 	{"c_cflag", lux_member(termios, c_cflag)},
@@ -24,11 +24,12 @@ template <> luaL_Reg lux_Class<termios>::index[] =
 	{"setospeed", lux_cast(cfsetospeed)},
 	{"setspeed", lux_cast(cfsetspeed)},
 	{nullptr}
-	};
+};
 
 extern "C" int luaopen_termios(lua_State *state)
 {
 	luaL_requiref(state, "termios", lux_Class<termios>::open, false);
+
 	luaL_Reg regs[] =
 	{
 	{"getsid", lux_cast(tcgetsid)},
@@ -41,6 +42,7 @@ extern "C" int luaopen_termios(lua_State *state)
 	{nullptr}
 	};
 	luaL_setfuncs(state, regs, 0);
+
 	lux_Reg<lua_Integer> args[] =
 	{
 	// c_cc
@@ -154,6 +156,7 @@ extern "C" int luaopen_termios(lua_State *state)
 	{nullptr}
 	};
 	lux_settable(state, args);
+
 	return 1;
 }
 

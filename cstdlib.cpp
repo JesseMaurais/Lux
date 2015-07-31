@@ -4,7 +4,7 @@
 static int _div(lua_State *state)
 {
 	auto numer = lux_to<int>(state, 1);
-	auto denom = lux_to<int>(state, 1);
+	auto denom = lux_to<int>(state, 2);
 	div_t res = div(numer, denom);
 	return lux_push(state, res.quot, res.rem);
 }
@@ -12,7 +12,7 @@ static int _div(lua_State *state)
 static int _ldiv(lua_State *state)
 {
 	auto numer = lux_to<long>(state, 1);
-	auto denom = lux_to<long>(state, 1);
+	auto denom = lux_to<long>(state, 2);
 	ldiv_t res = ldiv(numer, denom);
 	return lux_push(state, res.quot, res.rem);
 }
@@ -20,7 +20,7 @@ static int _ldiv(lua_State *state)
 static int _lldiv(lua_State *state)
 {
 	auto numer = lux_to<long long>(state, 1);
-	auto denom = lux_to<long long>(state, 1);
+	auto denom = lux_to<long long>(state, 2);
 	lldiv_t res = lldiv(numer, denom);
 	return lux_push(state, res.quot, res.rem);
 }
@@ -103,11 +103,8 @@ extern "C" int luaopen_cstdlib(lua_State *state)
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
-	struct {
-	 const char *name;
-	 lua_Integer value;
-	}
-	args[] =
+
+	lux_Reg<lua_Integer> args[] =
 	{
 	ARG(EXIT_FAILURE)
 	ARG(EXIT_SUCCESS)
@@ -115,11 +112,8 @@ extern "C" int luaopen_cstdlib(lua_State *state)
 	ARG(MB_CUR_MAX)
 	{nullptr}
 	};
-	for (auto r=args; r->name; ++r)
-	{
-	 lua_pushinteger(state, r->value);
-	 lua_setfield(state, -2, r->name);
-	}
+	lux_settable(state, args);
+
 	return 1;
 }
 

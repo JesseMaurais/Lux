@@ -2,7 +2,7 @@
 #include <clocale>
 
 template <> luaL_Reg lux_Class<lconv>::index[] =
-	{
+{
 	{"decimal_point", lux_member(lconv, decimal_point)},
 	{"thousands_sep", lux_member(lconv, thousands_sep)},
 	{"grouping", lux_member(lconv, grouping)},
@@ -28,7 +28,7 @@ template <> luaL_Reg lux_Class<lconv>::index[] =
 	{"int_p_sign_posn", lux_member(lconv, int_p_sign_posn)},
 	{"int_n_sign_posn", lux_member(lconv, int_n_sign_posn)},
 	{nullptr}
-	};
+};
 
 extern "C" int luaopen_clocale(lua_State *state)
 {

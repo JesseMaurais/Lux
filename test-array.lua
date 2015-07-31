@@ -24,3 +24,10 @@ print('c = ' .. tostring(c))
 d = short.new{7, 10, 6, 14}
 print('d = ' .. tostring(d))
 
+-- With char, short, int (8, 16, 32 bit integers) we can do strings
+
+e = char.new('Hello World!')
+for i = 0, #e-1 do
+	print('e['..i..'] = '..string.char(e[i]))
+end
+

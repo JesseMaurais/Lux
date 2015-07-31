@@ -5,6 +5,7 @@
 #include "lxstore.hpp"
 #include "lxstack.hpp"
 #include "lxbuffs.hpp"
+#include "lxchars.hpp"
 
 // Emulate C arrays/pointers in Lua
 
@@ -16,7 +17,9 @@ template <class User> struct lux_Array
 	// Array allocation function
 	static int __new(lua_State *state)
 	{
+		lux_Chars shift;
 		const char *string;
+		ssize_t length;
 		size_t size;
 		User *data;
 
@@ -41,6 +44,15 @@ template <class User> struct lux_Array
 			 data[it] = lux_to<User>(state, 3);
 			 lua_pop(state, 1);
 			}
+			break;
+		  case LUA_TSTRING:
+			string = lua_tolstring(state, 1, &size);
+			length = shift.stringsize(string, size);
+			if (length < 0)
+			return luaL_argerror(state, 1, "cannot convert");
+			else shift.reset();
+			data = new User [length];
+			size = shift.to(data, string, length);
 			break;
 		  default:
 			return luaL_argerror(state, 1, "invalid type");

@@ -6,6 +6,8 @@
 #include <wchar.h>
 #include <uchar.h>
 
+// Some compilers (GCC) lack the codecvt header for C++11
+
 struct lux_Chars : mbstate_t
 {
 	lux_Chars(void)
@@ -20,11 +22,25 @@ struct lux_Chars : mbstate_t
 		(void) memset(this, 0, sizeof(mbstate_t));
 	}
 
-	// Character length in bytes
+	// Char length in bytes
 
-	ssize_t length(const char *str, size_t max = MB_CUR_MAX)
+	ssize_t charsize(const char *str, size_t max = MB_CUR_MAX)
 	{
 		return mbrlen(str, max, this);
+	}
+
+	// String length in chars
+
+	ssize_t stringsize(const char *str, size_t max)
+	{
+		ssize_t sz;
+		size_t n;
+		for (n = 0; n < max and str[n]; n += sz)
+		{
+			sz = charsize(str + n, max - n);
+			if (sz < 0) return sz;
+		}
+		return n;
 	}
 
 	// Char conversion for wide-char
@@ -86,7 +102,7 @@ struct lux_Chars : mbstate_t
 	{
 		ssize_t sz;
 		size_t n;
-		for (n = 0; n < len && src[n]; n += sz, dst++)
+		for (n = 0; n < len and src[n]; n += sz, dst++)
 		{
 			sz = tochar(dst, src + n, len - n);
 			if (sz < 0) return sz;
@@ -94,58 +110,42 @@ struct lux_Chars : mbstate_t
 		return n;
 	}
 
-	// Generic string conversion
+	// Generic 'array' conversion (any integral types)
 
-	template <class Char>
-	ssize_t to(char *dst, const Char *src, size_t len)
+	template <class User>
+	ssize_t from(char *dst, const User *src, size_t len)
 	{
-		return _to<Char, sizeof(Char)>(dst, src, len);
+		switch (sizeof(User))
+		{
+		default:
+			return -4;
+		case sizeof(char):
+			strncpy(dst, (const char *) src, len);
+			return len;
+		case sizeof(char16_t):
+			return tostring(dst, (const char16_t *) src, len);
+		case sizeof(char32_t):
+			return tostring(dst, (const char32_t *) src, len);
+		}
 	}
 
-	template <class Char>
-	ssize_t to(Char *dst, const char *src, size_t len)
+	template <class User>
+	ssize_t to(User *dst, const char *src, size_t len)
 	{
-		return _to<Char, sizeof(Char)>(dst, src, len);
+		switch (sizeof(User))
+		{
+		default:
+			return -4;
+		case sizeof(char):
+			strncpy((char *) dst, src, len);
+			return len;
+		case sizeof(char16_t):
+			return tostring((char16_t *) dst, src, len);
+		case sizeof(char32_t):
+			return tostring((char32_t *) dst, src, len);
+		}
 	}
-
- private:
-
-	// Generic string conversion with char class size
-
-	template <class Char, size_t Size>
-	ssize_t _to(char *dst, const Char *src, size_t len);
-
-	template <class Char, size_t Size>
-	ssize_t _to(Char *dst, const char *src, size_t len);
 };
-
-// Generic 16-bit string conversion
-
-template <class Char>
-ssize_t lux_Chars::_to<Char, sizeof(char16_t)>(char *dst, const Char *src, size_t len)
-{
-	return lux_Chars::tostring(dst, (const char16_t *) src, len);
-}
-
-template <class Char>
-ssize_t lux_Chars::_to<Char, sizeof(char16_t)>(Char *dst, const char *src, size_t len)
-{
-	return lux_Chars::tostring((char16_t *) dst, src, len);
-}
-
-// Generic 32-bit string conversion
-
-template <class Char>
-ssize_t lux_Chars::_to<Char, sizeof(char32_t)>(char *dst, const Char *src, size_t len)
-{
-	return lux_Chars::tostring(dst, (const char32_t *) src, len);
-}
-
-template <class Char>
-ssize_t lux_Chars::_to<Char, sizeof(char32_t)>(Char *dst, const char *src, size_t len)
-{
-	return lux_Chars::tostring((char32_t *) dst, str, len);
-}
 
 #endif // file
 

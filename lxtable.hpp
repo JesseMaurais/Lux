@@ -35,7 +35,7 @@ void lux_settable(lua_State *state, const lux_Reg<User> regs[])
 	for (auto r=regs; r->name; ++r)
 	{
 		lua_pushstring(state, r->name);
-		lux_push(state, r->value);
+		lux_push<User>(state, r->value);
 		lua_settable(state, -3);
 	}
 }
