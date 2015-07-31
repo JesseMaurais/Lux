@@ -24,7 +24,7 @@ print('c = ' .. tostring(c))
 d = short.new{7, 10, 6, 14}
 print('d = ' .. tostring(d))
 
--- With char, short, int (8, 16, 32 bit integers) we can do strings
+-- With integer types we can do strings. Undefined for floating point types.
 
 e = char.new('Hello World!')
 for i = 0, #e-1 do

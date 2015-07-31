@@ -19,7 +19,14 @@ struct lux_Chars : mbstate_t
 
 	void reset(void)
 	{
-		(void) memset(this, 0, sizeof(mbstate_t));
+		memset(this, 0, sizeof(mbstate_t));
+	}
+
+	// Check if initial state
+
+	bool isinit(void)
+	{
+		return mbsinit(this) not_eq 0;
 	}
 
 	// Char length in bytes
@@ -81,6 +88,12 @@ struct lux_Chars : mbstate_t
 
 	// String conversion
 
+	ssize_t tostring(char *dst, const char *src, size_t len)
+	{
+		strncpy(dst, src, len);
+		return len;
+	}
+
 	template <class Char>
 	ssize_t tostring(char *dst, const Char *src, size_t len)
 	{
@@ -91,7 +104,7 @@ struct lux_Chars : mbstate_t
 		{
 			sz = tochar(str, src[n]);
 			if (sz < 0) return sz;
-			strncpy(dst, str, sz);
+			tostring(dst, str, sz);
 			dst += sz;
 		}
 		return n;
@@ -110,23 +123,24 @@ struct lux_Chars : mbstate_t
 		return n;
 	}
 
-	// Generic 'array' conversion (any integral types)
+	// Generic 'array' conversion (any integer types)
 
 	template <class User>
 	ssize_t from(char *dst, const User *src, size_t len)
 	{
 		switch (sizeof(User))
 		{
-		default:
-			return -4;
 		case sizeof(char):
-			strncpy(dst, (const char *) src, len);
-			return len;
+			return tostring(dst, (const char *) src, len);
 		case sizeof(char16_t):
 			return tostring(dst, (const char16_t *) src, len);
 		case sizeof(char32_t):
 			return tostring(dst, (const char32_t *) src, len);
 		}
+		// default
+		char32_t buf[len];
+		for (int n = 0; n < len; ++n) buf[n] = src[n];
+		return tostring(dst, buf, len);
 	}
 
 	template <class User>
@@ -134,16 +148,18 @@ struct lux_Chars : mbstate_t
 	{
 		switch (sizeof(User))
 		{
-		default:
-			return -4;
 		case sizeof(char):
-			strncpy((char *) dst, src, len);
-			return len;
+			return tostring((char *) dst, src, len);
 		case sizeof(char16_t):
 			return tostring((char16_t *) dst, src, len);
 		case sizeof(char32_t):
 			return tostring((char32_t *) dst, src, len);
 		}
+		// default
+		char32_t buf[len];
+		ssize_t sz = tostring(buf, src, len);
+		for (int n = 0; n < sz; ++n) dst[n] = buf[n];
+		return sz;
 	}
 };
 
