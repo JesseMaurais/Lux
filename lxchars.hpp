@@ -52,7 +52,7 @@ struct lux_Chars : mbstate_t
 
 	// Char conversion for wide-char
 
-	ssize_t tochar(char *dst, wchar_t src)
+	ssize_t fromchar(char *dst, wchar_t src)
 	{
 		return wcrtomb(dst, src, this);
 	}
@@ -64,7 +64,7 @@ struct lux_Chars : mbstate_t
 
 	// Char conversion for UTF-16
 
-	ssize_t tochar(char *dst, char16_t src)
+	ssize_t fromchar(char *dst, char16_t src)
 	{
 		return c16rtomb(dst, src, this);
 	}
@@ -76,7 +76,7 @@ struct lux_Chars : mbstate_t
 
 	// Char conversion for UTF-32
 
-	ssize_t tochar(char *dst, char32_t src)
+	ssize_t fromchar(char *dst, char32_t src)
 	{
 		return c32rtomb(dst, src, this);
 	}
@@ -88,6 +88,12 @@ struct lux_Chars : mbstate_t
 
 	// String conversion
 
+	ssize_t fromstring(char *dst, const char *src, size_t len)
+	{
+		strncpy(dst, src, len);
+		return len;
+	}
+
 	ssize_t tostring(char *dst, const char *src, size_t len)
 	{
 		strncpy(dst, src, len);
@@ -95,16 +101,16 @@ struct lux_Chars : mbstate_t
 	}
 
 	template <class Char>
-	ssize_t tostring(char *dst, const Char *src, size_t len)
+	ssize_t fromstring(char *dst, const Char *src, size_t len)
 	{
 		char str[MB_CUR_MAX];
 		ssize_t sz;
 		size_t n;
 		for (n = 0; n < len and src[n]; ++n)
 		{
-			sz = tochar(str, src[n]);
+			sz = fromchar(str, src[n]);
 			if (sz < 0) return sz;
-			tostring(dst, str, sz);
+			fromstring(dst, str, sz);
 			dst += sz;
 		}
 		return n;
@@ -131,16 +137,16 @@ struct lux_Chars : mbstate_t
 		switch (sizeof(User))
 		{
 		case sizeof(char):
-			return tostring(dst, (const char *) src, len);
+			return fromstring(dst, (const char *) src, len);
 		case sizeof(char16_t):
-			return tostring(dst, (const char16_t *) src, len);
+			return fromstring(dst, (const char16_t *) src, len);
 		case sizeof(char32_t):
-			return tostring(dst, (const char32_t *) src, len);
+			return fromstring(dst, (const char32_t *) src, len);
 		}
 		// default
 		char32_t buf[len];
 		for (int n = 0; n < len; ++n) buf[n] = src[n];
-		return tostring(dst, buf, len);
+		return fromstring(dst, buf, len);
 	}
 
 	template <class User>
