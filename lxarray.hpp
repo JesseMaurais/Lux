@@ -171,27 +171,17 @@ template <class User> struct lux_Array
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
 		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
-		// Shorthand variables
-		size_t t = user->size;
-		size_t s = shift;
-		size_t n = s % t;
-		size_t m = t - n;
-		// Copy without overlap
-		if (n < m)
-		{
-		User temp[m];
-		memcpy(temp, user->data + n, m * sizeof(User));
-		memcpy(user->data + m, user->data, n * sizeof(User));
-		memcpy(user->data, temp, m * sizeof(User));
-		}
-		else
-		{
-		User temp[n];
-		memcpy(temp, user->data, n * sizeof(User));
-		memcpy(user->data, user->data + n, m * sizeof(User));
-		memcpy(user->data + m, temp, n * sizeof(User));
-		}
-		lua_pushvalue(state, 1);
+		// Proportions used in shift
+		size_t size = abs(user->size);
+		size_t n = shift % size;
+		size_t m = size - n;
+		// Copy parts into new array
+		User *data = new User [size];
+		memcpy(data, user->data + n, m * sizeof(User));
+		memcpy(data + m, user->data, n * sizeof(User));
+		// Put array onto the stack
+		Type::push(state, data, size);
+		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
 
@@ -202,43 +192,115 @@ template <class User> struct lux_Array
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
 		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
-		// Shorthand variables
-		size_t t = user->size;
-		size_t s = shift;
-		size_t n = s % t;
-		size_t m = t - n;
-		// Copy without overlap
-		if (n < m)
-		{
-		User temp[m];
-		memcpy(temp, user->data, m * sizeof(User));
-		memcpy(user->data, user->data + m, n * sizeof(User));
-		memcpy(user->data + n, temp, m * sizeof(User));
-		}
-		else
-		{
-		User temp[n];
-		memcpy(temp, user->data + m, n * sizeof(User));
-		memcpy(user->data + m, user->data, m * sizeof(User));
-		memcpy(user->data, temp, n * sizeof(User));
-		}
-		lua_pushvalue(state, 1);
+		// Proportions used in shift
+		size_t size = abs(user->size);
+		size_t n = shift % size;
+		size_t m = size - n;
+		// Copy part into new array
+		User *data = new User [size];
+		memcpy(data, user->data + m, n * sizeof(User));
+		memcpy(data + n, user->data, m * sizeof(User));
+		// Put array onto the stack
+		Type::push(state, data, size);
+		luaL_setmetatable(state, Type::name);
 		return 1;
-	}
-
-	// Element comparison operator used for qsort
-	static int compare(const void *p1, const void *p2)
-	{
-		User e1 = *(const User *) p1;
-		User e2 = *(const User *) p2;
-		return e1 < e2 ? -1 : e1 > e2 ? 1 : 0;
 	}
 
 	// Quick sort of the array elements
 	static int __qsort(lua_State *state)
 	{
+		// Element comparison operator used for quick sort
+		auto compare = [](const void *p1, const void *p2)->int
+		{
+			// Cast to the userdata type
+			User a = *(const User *) p1;
+			User b = *(const User *) p2;
+			// Compare as numeric values
+			return a < b ? -1 : a > b ? +1 : 0;
+		};
 		Type *user = Type::check(state);
 		qsort(user->data, abs(user->size), sizeof(User), compare);
+	}
+
+	// Check equality of elements
+	static int __eq(lua_State *state)
+	{
+		Type *one = Type::check(state, 1);
+		Type *two = Type::check(state, 2);
+		// Are equal if pointers are
+		if (one->data == two->data)
+		{
+			lux_push(state, true);
+			return 1;
+		}
+		// Not equal if sizes aren't
+		if (one->size != two->size)
+		{
+			lux_push(state, false);
+			return 1;
+		}
+		size_t size = abs(one->size);
+		// Now we check each of the members
+		for (int item = 0; item < size; ++item)
+		{
+			// Not equal if any respective members don't
+			if (one->data[item] not_eq two->data[item])
+			{
+				lux_push(state, false);
+				return 1;
+			}
+		}
+		// Must be equal
+		lux_push(state, true);
+		return 1;
+	}
+
+	// Lexical less than comparison
+	static int __lt(lua_State *state)
+	{
+		Type *one = Type::check(state, 1);
+		Type *two = Type::check(state, 2);
+		// Genuine rray sizes
+		size_t n = abs(one->size);
+		size_t m = abs(two->size);
+		// Find the smaller of them
+		size_t size = n < m ? n : m;
+		// Compare each respective element
+		for (int item = 0; item < size; ++item)
+		{
+			// Return on first negative result
+			if (one->data[item] >= two->data[item])
+			{
+				lux_push(state, false);
+				return 1;
+			}
+		}
+		lux_push(state, true);
+		return 1;
+	}
+
+	// Lexical less than or equal
+	static int __le(lua_State *state)
+	{
+		Type *one = Type::check(state, 1);
+		Type *two = Type::check(state, 2);
+		// Genuine rray sizes
+		size_t n = abs(one->size);
+		size_t m = abs(two->size);
+		// Find the smaller of them
+		size_t size = n < m ? n : m;
+		// Compare each respective element
+		for (int item = 0; item < size; ++item)
+		{
+			// Return on first negative result
+			if (one->data[item] > two->data[item])
+			{
+				lux_push(state, false);
+				return 1;
+			}
+		}
+		lux_push(state, true);
+		return 1;
 	}
 
 	// Read as string from a file
@@ -318,6 +380,9 @@ template <class User> struct lux_Array
 		{"__shl", __shl},
 		{"__shr", __shr},
 		{"__len", __len},
+		{"__eq", __eq},
+		{"__lt", __lt},
+		{"__le", __le},
 		{"__gc", __gc},
 		{nullptr}
 		};
