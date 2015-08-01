@@ -7,8 +7,14 @@ LC.setlocale(LC.ALL, "en_CA.UTF-8") -- affects encoding behaviour
 
 print "The following is built using code points"
 
-msg = int.new{9829, 32, 956, 945, 952, 951, 956, 945, 964, 953, 954, 940, 10}
+msg = int.new{9829, 32, 956, 945, 952, 951, 956, 945, 964, 953, 954, 940}
 int.fputs(msg, io.stdout) -- encodes the array as a UTF-8 string
+print '\n'
+
+print "These characters sorted are..."
+int.qsort(msg) -- using the quick sort algorithm
+int.fputs(msg, io.stdout)
+print '\n'
 
 print "Now enter a string and I'll tell you the code points"
 

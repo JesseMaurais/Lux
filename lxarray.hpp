@@ -226,6 +226,21 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Element comparison operator used for qsort
+	static int compare(const void *p1, const void *p2)
+	{
+		User e1 = *(const User *) p1;
+		User e2 = *(const User *) p2;
+		return e1 < e2 ? -1 : e1 > e2 ? 1 : 0;
+	}
+
+	// Quick sort of the array elements
+	static int __qsort(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		qsort(user->data, abs(user->size), sizeof(User), compare);
+	}
+
 	// Read as string from a file
 	static int __fgets(lua_State *state)
 	{
@@ -289,6 +304,7 @@ template <class User> struct lux_Array
 		luaL_Reg regs [] =
 		{
 		{"new", __new},
+		{"qsort", __qsort},
 		{"fgets", __fgets},
 		{"fputs", __fputs},
 		{"fread", __fread},
