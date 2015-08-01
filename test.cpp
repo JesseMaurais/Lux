@@ -63,6 +63,18 @@ template <> luaL_Reg lux_Class<Account>::index[] =
 
 extern "C" int luaopen_test(lua_State *state)
 {
+	/*
+//	char32_t string[] = U"\x03BC\x03B1\x03B8";
+	char32_t string[] = { 0x03BC, 0x03B1, 0x03B8, 0x0 };
+	lux_Chars shift;
+	char data[sizeof(string)*4];
+	int size = shift.from(data, string, sizeof(string));
+	if (size < 0)
+	 printf("%d\n", size);
+	else
+	 printf("%s\n", data);
+	*/
+
 	// Basic way to register a single function
 	lua_register(state, "WriteOut", lux_cast(WriteOut));
 	// Lua should catch and report errors given here

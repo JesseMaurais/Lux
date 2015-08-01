@@ -130,6 +130,17 @@ void lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t)
 	lua_pushnil(state);
 }
 
+// Special case of C FILE handle
+
+template <> inline
+void lux_push<FILE*>(lua_State *state, FILE *value)
+{
+	auto stream = new (state) luaL_Stream;
+	stream->f = value;
+	stream->closef = nullptr;
+	luaL_setmetatable(state, LUA_FILEHANDLE);
+}
+
 // "to" rather than "check" counterparts in stack conversion
 
 template <> inline
@@ -226,6 +237,27 @@ const char *lux_to<const char *>(lua_State *state, int stack)
 	}
 	typedef lux_Store<char*> Type;
 	return Type::to(state, stack);
+}
+
+// Special case of Lua file stream
+
+template <> inline
+luaL_Stream *lux_to<luaL_Stream*>(lua_State *state, int stack)
+{
+	union {
+	 luaL_Stream *stream;
+	 void *address;
+	};
+	address = luaL_checkudata(state, stack, LUA_FILEHANDLE);
+	return stream;
+}
+
+// Special case of C FILE stream
+
+template <> inline
+FILE *lux_to<FILE*>(lua_State *state, int stack)
+{
+	return lux_to<luaL_Stream*>(state, stack)->f;
 }
 
 

@@ -6,6 +6,7 @@
 #include "lxstack.hpp"
 #include "lxbuffs.hpp"
 #include "lxchars.hpp"
+#include "lxerror.hpp"
 
 // Emulate C arrays/pointers in Lua
 
@@ -75,21 +76,17 @@ template <class User> struct lux_Array
 	static int __tostring(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		const char *sep = nullptr;
 		// Build up a string
 		lux_Buffer buffer(state);
-		buffer.addchar('{');
 		// Iterate over each item in the array
 		for (auto item = 0; item < user->size; ++item)
 		{
-			// Add separator after first
-			if (sep) buffer.addstring(sep);
-			else sep = ", ";
+			// Add separator only after first
+			if (item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
 			buffer.addvalue();
 		}
-		buffer.addchar('}');
 		buffer.push();
 		return 1;
 	}
@@ -162,6 +159,61 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Read as string from a file
+	static int __fgets(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_to<FILE*>(state, 2);
+		// Buffer to store UTF-8 characters
+		char data[user->size * MB_CUR_MAX];
+		// Read from the file stream
+		fgets(data, sizeof(data), file);
+		// Conversion
+		lux_Chars shift;
+		ssize_t size = shift.to(user->data, data, sizeof(data));
+		if (size < 0) return lux_perror(state);
+		// Return bytes read
+		lux_push(state, size);
+		return 1;
+	}
+
+	// Write as string to a file
+	static int __fputs(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_to<FILE*>(state, 2);
+		// Buffer to store UTF-8 characters
+		char data[user->size * MB_CUR_MAX];
+		// Conversion
+		lux_Chars shift;
+		ssize_t size = shift.from(data, user->data, user->size);
+		if (size < 0) return lux_perror(state);
+		// Write to the file stream
+		data[size] = '\0';
+		fputs(data, file);
+		return 0;
+	}
+
+	// Read binary elements from a file
+	static int __fread(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_to<FILE*>(state, 2);
+		size_t num = fread(user->data, user->size, sizeof(User), file);
+		lux_push(state, num);
+		return 1;
+	}
+
+	// Write binary elements to a file
+	static int __fwrite(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_to<FILE*>(state, 2);
+		size_t num = fwrite(user->data, user->size, sizeof(User), file);
+		lux_push(state, num);
+		return 1;
+	}
+
 	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
@@ -170,6 +222,10 @@ template <class User> struct lux_Array
 		luaL_Reg regs [] =
 		{
 		{"new", __new},
+		{"fgets", __fgets},
+		{"fputs", __fputs},
+		{"fread", __fread},
+		{"fwrite", __fwrite},
 		{"__tostring", __tostring},
 		{"__concat", __concat},
 		{"__newindex", __newindex},

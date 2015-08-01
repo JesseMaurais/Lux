@@ -1,6 +1,7 @@
 #ifndef __lxchars__
 #define __lxchars__
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <wchar.h>
@@ -14,6 +15,10 @@ struct lux_Chars : mbstate_t
 	{
 		reset();
 	}
+
+	// Errors returned by C11 functions
+
+	enum { NSEQUENCE = -1, NCOMPLETE = -2, SURROGATE = -3 };
 
 	// Reset the shift state
 
@@ -86,7 +91,7 @@ struct lux_Chars : mbstate_t
 		return mbrtoc32(dst, src, max, this);
 	}
 
-	// String conversion
+	// String conversion base case
 
 	ssize_t fromstring(char *dst, const char *src, size_t len)
 	{
@@ -100,36 +105,39 @@ struct lux_Chars : mbstate_t
 		return len;
 	}
 
+	// String conversion
+
 	template <class Char>
 	ssize_t fromstring(char *dst, const Char *src, size_t len)
 	{
 		char str[MB_CUR_MAX];
 		ssize_t sz;
-		size_t n;
-		for (n = 0; n < len and src[n]; ++n)
+		size_t n, m;
+		for (n = m = 0; n < len and src[n]; m += sz, ++n)
 		{
 			sz = fromchar(str, src[n]);
 			if (sz < 0) return sz;
-			fromstring(dst, str, sz);
-			dst += sz;
+			fromstring(dst + m, str, sz);
 		}
-		return n;
+		return m;
 	}
 
 	template <class Char>
 	ssize_t tostring(Char *dst, const char *src, size_t len)
 	{
 		ssize_t sz;
-		size_t n;
-		for (n = 0; n < len and src[n]; n += sz, dst++)
+		size_t n, m;
+		for (n = m = 0; n < len and src[n]; n += sz, ++m)
 		{
-			sz = tochar(dst, src + n, len - n);
-			if (sz < 0) return sz;
+			sz = tochar(dst + m, src + n, len - n);
+			// Surrogate pairs recall at same src[n]
+			if (sz < 0) if (sz == SURROGATE) sz = 0;
+			else return sz; // Otherwise an error
 		}
-		return n;
+		return m;
 	}
 
-	// Generic 'array' conversion (any integer types)
+	// Generic 'array' conversion for any integers
 
 	template <class User>
 	ssize_t from(char *dst, const User *src, size_t len)
@@ -137,16 +145,14 @@ struct lux_Chars : mbstate_t
 		switch (sizeof(User))
 		{
 		case sizeof(char):
-			return fromstring(dst, (const char *) src, len);
+			return fromcast<char>(dst, src, len);
 		case sizeof(char16_t):
-			return fromstring(dst, (const char16_t *) src, len);
+			return fromcast<char16_t>(dst, src, len);
 		case sizeof(char32_t):
-			return fromstring(dst, (const char32_t *) src, len);
+			return fromcast<char32_t>(dst, src, len);
+		default:
+			return fromcopy<char32_t>(dst, src, len);
 		}
-		// default
-		char32_t buf[len];
-		for (int n = 0; n < len; ++n) buf[n] = src[n];
-		return fromstring(dst, buf, len);
 	}
 
 	template <class User>
@@ -155,19 +161,88 @@ struct lux_Chars : mbstate_t
 		switch (sizeof(User))
 		{
 		case sizeof(char):
-			return tostring((char *) dst, src, len);
+			return tocast<char>(dst, src, len);
 		case sizeof(char16_t):
-			return tostring((char16_t *) dst, src, len);
+			return tocast<char16_t>(dst, src, len);
 		case sizeof(char32_t):
-			return tostring((char32_t *) dst, src, len);
+			return tocast<char32_t>(dst, src, len);
+		default:
+			return tocopy<char32_t>(dst, src, len);
 		}
-		// default
-		char32_t buf[len];
+	}
+
+ private:
+
+	// Casting integer to char arrays is not strictly type safe
+
+	template <class Char, class User>
+	ssize_t fromcast(char *dst, const User *src, size_t len)
+	{
+		assert(sizeof(User) == sizeof(Char));
+		return fromstring(dst, (const Char *) src, len);
+	}
+
+	template <class Char, class User>
+	ssize_t tocast(User *dst, const char *src, size_t len)
+	{
+		assert(sizeof(User) == sizeof(Char));
+		return tostring((Char *) dst, src, len);
+	}
+
+	// Copying integer to char arrays is safe but slower
+
+	template <class Char, class User>
+	ssize_t fromcopy(char *dst, const User *src, size_t len)
+	{
+		Char buf[len];
+		for (int n = 0; n < len; ++n) buf[n] = src[n];
+		return fromstring(dst, buf, len);
+	}
+
+	template <class Char, class User>
+	ssize_t tocopy(User *dst, const char *src, size_t len)
+	{
+		Char buf[len];
 		ssize_t sz = tostring(buf, src, len);
 		for (int n = 0; n < sz; ++n) dst[n] = buf[n];
 		return sz;
 	}
 };
+
+// Copy floating point arrays to preserve numeric values
+
+template <>
+ssize_t lux_Chars::from<float>(char *dst, const float *src, size_t len)
+{
+	return fromcopy<char32_t>(dst, src, len);
+}
+template <>
+ssize_t lux_Chars::to<float>(float *dst, const char *src, size_t len)
+{
+	return tocopy<char32_t>(dst, src, len);
+}
+
+template <>
+ssize_t lux_Chars::from<double>(char *dst, const double *src, size_t len)
+{
+	return fromcopy<char32_t>(dst, src, len);
+}
+template <>
+ssize_t lux_Chars::to<double>(double *dst, const char *src, size_t len)
+{
+	return tocopy<char32_t>(dst, src, len);
+}
+
+template <>
+ssize_t lux_Chars::from<long double>(char *dst, const long double *src, size_t len)
+{
+	return fromcopy<char32_t>(dst, src, len);
+}
+template <>
+ssize_t lux_Chars::to<long double>(long double *dst, const char *src, size_t len)
+{
+	return tocopy<char32_t>(dst, src, len);
+}
 
 #endif // file
 
