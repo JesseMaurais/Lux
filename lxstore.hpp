@@ -32,9 +32,9 @@ template <class User> struct lux_Pack : lux_Type<User>
 template <class User> struct lux_Pack<User*> : lux_Type<User*>
 {
 	User *data;
-	size_t size;
+	ssize_t size;
 
-	lux_Pack(User *data=nullptr, size_t size=0)
+	lux_Pack(User *data=nullptr, ssize_t size=0)
 	{
 		this->data = data;
 		this->size = size;
@@ -45,7 +45,7 @@ template <class User> struct lux_Pack<User*> : lux_Type<User*>
 
 template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 {
-	lux_Pack(const User *data=nullptr, size_t size=0)
+	lux_Pack(const User *data=nullptr, ssize_t size=0)
 	{
 		this->data = const_cast<User*>(data);
 		this->size = size;
@@ -54,12 +54,12 @@ template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 
 // The fixed sized array case
 
-template <class User, int Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
+template <class User, size_t Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
 {
 	lux_Pack(User *data=nullptr)
 	{
 		this->data = data;
-		this->size = 0; // Not owner
+		this->size = -Size; // Not owner
 	}
 };
 
@@ -89,7 +89,7 @@ template <class User> struct lux_Store : lux_Pack<User>
 		return user;
 	}
 
-	static Type *push(lua_State *state, User data, size_t size=0)
+	static Type *push(lua_State *state, User data, ssize_t size=0)
 	{
 		return new (state) Type(data, size);
 	}
@@ -128,7 +128,7 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 		return user;
 	}
 
-	static Type *push(lua_State *state, User *data, size_t size=0)
+	static Type *push(lua_State *state, User *data, ssize_t size=0)
 	{
 		if (data) return new (state) Type(data, size);
 		lua_pushnil(state);

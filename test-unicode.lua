@@ -13,8 +13,7 @@ int.fputs(msg, io.stdout) -- encodes the array as a UTF-8 string
 print "Now enter a string and I'll tell you the code points"
 
 io.flush()
-input = io.read()
-msg = int.new(input)
+msg = int.new(io.read())
 print "The code points are..."
 print(tostring(msg))
 

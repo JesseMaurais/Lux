@@ -23,7 +23,7 @@ template <class User> struct lux_Array
 		ssize_t length;
 		size_t size;
 		User *data;
-
+		// Constructor arguments
 		switch (lua_type(state, 1))
 		{
 		  case LUA_TNIL:
@@ -36,7 +36,7 @@ template <class User> struct lux_Array
 			data = new User [size];
 			break;
 		  case LUA_TTABLE:
-		  case LUA_TUSERDATA:
+			// Copy table contents
 			size = luaL_len(state, 1);
 			data = new User [size];
 			lua_pushnil(state);
@@ -47,18 +47,20 @@ template <class User> struct lux_Array
 			}
 			break;
 		  case LUA_TSTRING:
+			// Get UTF-8 encoded string with length
 			string = lua_tolstring(state, 1, &size);
 			length = shift.stringsize(string, size);
-			if (length < 0)
-			return luaL_argerror(state, 1, "cannot convert");
+			// Check the string for encoding errors
+			if (length < 0)	return lux_argerror(state, 1);
 			else shift.reset();
+			// Create and convert
 			data = new User [length];
 			size = shift.to(data, string, length);
 			break;
 		  default:
 			return luaL_argerror(state, 1, "invalid type");
 		};
-
+		// Put the array on the stack
 		Type::push(state, data, size);
 		luaL_setmetatable(state, Type::name);
 		return 1;
@@ -68,26 +70,16 @@ template <class User> struct lux_Array
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		if (user->size) delete [] user->data;
+		// Owner's have non-negative sizes
+		if (0 < user->size) delete [] user->data;
 		return 0;
 	}
 
-	// String conversion for printing
-	static int __tostring(lua_State *state)
+	// Size of array or zero if pointer
+	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		// Build up a string
-		lux_Buffer buffer(state);
-		// Iterate over each item in the array
-		for (auto item = 0; item < user->size; ++item)
-		{
-			// Add separator only after first
-			if (item) buffer.addstring(", ");
-			// Convert each element to string
-			lux_push(state, user->data[item]);
-			buffer.addvalue();
-		}
-		buffer.push();
+		lux_push(state, abs(user->size));
 		return 1;
 	}
 
@@ -109,25 +101,46 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
+	// String conversion for printing
+	static int __tostring(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		size_t size = abs(user->size);
+		// Build up a string
+		lux_Buffer buffer(state);
+		// Iterate over each item in the array
+		for (auto item = 0; item < size; ++item)
+		{
+			// Add separator only after first
+			if (item) buffer.addstring(", ");
+			// Convert each element to string
+			lux_push(state, user->data[item]);
+			buffer.addvalue();
+		}
+		buffer.push();
+		return 1;
+	}
+
 	// Concatenate arrays of same type
 	static int __concat(lua_State *state)
 	{
 		Type *one = Type::check(state, 1);
 		Type *two = Type::check(state, 2);
-		// If arrays but not pointers
-		if (one->size && two->size)
+		// Genuine size of arrays
+		size_t n = abs(one->size);
+		size_t m = abs(two->size);
+		// Pointers are valid?
+		if (n > 0 and m > 0)
 		{
-			// Calculate/create required storage
-			size_t size = one->size + two->size;
-			auto *data = new User [size];
+			// Required storage
+			size_t size = n + m;
+			User *data = new User [size];
 			// Push userdata onto stack
 			new (state) Type(data, size);
 			luaL_setmetatable(state, Type::name);
-			// Copy contents of the input arrays to new array
-			for (int item = 0; item < one->size; ++item, ++data)
-				*data = one->data[item];
-			for (int item = 0; item < two->size; ++item, ++data)
-				*data = two->data[item];
+			// Copy contents of input arrays
+			memcpy(data + n, two->data, m * sizeof(User));
+			memcpy(data, one->data, n * sizeof(User));
 			return 1;
 		}
 		return 0;
@@ -151,11 +164,65 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Size of array or zero if pointer
-	static int __len(lua_State *state)
+	// Shift values left by given amount
+	static int __shl(lua_State *state)
 	{
-		Type *user = Type::check(state);
-		lux_push(state, user->size);
+		Type *user = Type::check(state, 1);
+		ssize_t shift = luaL_checkinteger(state, 2);
+		// We only accept positive values for shifting
+		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
+		// Shorthand variables
+		size_t t = user->size;
+		size_t s = shift;
+		size_t n = s % t;
+		size_t m = t - n;
+		// Copy without overlap
+		if (n < m)
+		{
+		User temp[m];
+		memcpy(temp, user->data + n, m * sizeof(User));
+		memcpy(user->data + m, user->data, n * sizeof(User));
+		memcpy(user->data, temp, m * sizeof(User));
+		}
+		else
+		{
+		User temp[n];
+		memcpy(temp, user->data, n * sizeof(User));
+		memcpy(user->data, user->data + n, m * sizeof(User));
+		memcpy(user->data + m, temp, n * sizeof(User));
+		}
+		lua_pushvalue(state, 1);
+		return 1;
+	}
+
+	// Shift values right by given amount
+	static int __shr(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		ssize_t shift = luaL_checkinteger(state, 2);
+		// We only accept positive values for shifting
+		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
+		// Shorthand variables
+		size_t t = user->size;
+		size_t s = shift;
+		size_t n = s % t;
+		size_t m = t - n;
+		// Copy without overlap
+		if (n < m)
+		{
+		User temp[m];
+		memcpy(temp, user->data, m * sizeof(User));
+		memcpy(user->data, user->data + m, n * sizeof(User));
+		memcpy(user->data + n, temp, m * sizeof(User));
+		}
+		else
+		{
+		User temp[n];
+		memcpy(temp, user->data + m, n * sizeof(User));
+		memcpy(user->data + m, user->data, m * sizeof(User));
+		memcpy(user->data, temp, n * sizeof(User));
+		}
+		lua_pushvalue(state, 1);
 		return 1;
 	}
 
@@ -232,6 +299,8 @@ template <class User> struct lux_Array
 		{"__index", __index},
 		{"__add", __add},
 		{"__sub", __sub},
+		{"__shl", __shl},
+		{"__shr", __shr},
 		{"__len", __len},
 		{"__gc", __gc},
 		{nullptr}
