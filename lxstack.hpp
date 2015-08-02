@@ -24,9 +24,16 @@ void lux_push(lua_State *state, User data)
 {
 	typedef lux_Store<User> Type;
 	(void) Type::push(state, data);
-	luaL_setmetatable(state, Type::name);
 }
 
+// Generic opt -- userdata as an optional argument
+
+template <class User> inline
+User lux_opt(lua_State *state, int stack, User opt)
+{
+	typedef lux_Store<User> Type;
+	return Type::opt(state, stack, opt);
+}
 // Generic to -- convert userdata at given stack index
 
 template <class User> inline
@@ -141,6 +148,107 @@ void lux_push<FILE*>(lua_State *state, FILE *value)
 	luaL_setmetatable(state, LUA_FILEHANDLE);
 }
 
+// Optional argument conversion forms
+
+template <> inline
+bool lux_opt<bool>(lua_State *state, int stack, bool opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+int lux_opt<int>(lua_State *state, int stack, int opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+char lux_opt<char>(lua_State *state, int stack, char opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+short lux_opt<short>(lua_State *state, int stack, short opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+long lux_opt<long>(lua_State *state, int stack, long opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+float lux_opt<float>(lua_State *state, int stack, float opt)
+{
+	return luaL_optnumber(state, stack, opt);
+}
+template <> inline
+double lux_opt<double>(lua_State *state, int stack, double opt)
+{
+	return luaL_optnumber(state, stack, opt);
+}
+template <> inline
+void *lux_opt<void *>(lua_State *state, int stack, void *opt)
+{
+	void *address = lua_touserdata(state, stack);
+	return address ? address : opt;
+}
+template <> inline
+long long lux_opt<long long>(lua_State *state, int stack, long long opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+long double lux_opt<long double>(lua_State *state, int stack, long double opt)
+{
+	return luaL_optnumber(state, stack, opt);
+}
+template <> inline
+lua_CFunction lux_opt(lua_State *state, int stack, lua_CFunction opt)
+{
+	lua_CFunction function = lua_tocfunction(state, stack);
+	return function ? function : opt;
+}
+
+// For unsigned types
+
+template <> inline
+unsigned int lux_opt(lua_State *state, int stack, unsigned int opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+unsigned char lux_opt(lua_State *state, int stack, unsigned char opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+unsigned short lux_opt(lua_State *state, int stack, unsigned short opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+unsigned long lux_opt(lua_State *state, int stack, unsigned long opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+template <> inline
+unsigned long long lux_opt(lua_State *state, int stack, unsigned long long opt)
+{
+	return luaL_optinteger(state, stack, opt);
+}
+
+// Special case of C File handle
+
+template <> inline
+FILE *lux_opt<FILE *>(lua_State *state, int stack, FILE *opt)
+{
+	union {
+	 luaL_Stream *stream;
+	 void *address;
+	};
+	address = luaL_testudata(state, stack, LUA_FILEHANDLE);
+	return address ? stream->f : opt;
+}
+
 // "to" rather than "check" counterparts in stack conversion
 
 template <> inline
@@ -239,27 +347,18 @@ const char *lux_to<const char *>(lua_State *state, int stack)
 	return Type::to(state, stack);
 }
 
-// Special case of Lua file stream
+// Special case of C FILE handle
 
 template <> inline
-luaL_Stream *lux_to<luaL_Stream*>(lua_State *state, int stack)
+FILE *lux_to<FILE *>(lua_State *state, int stack)
 {
 	union {
 	 luaL_Stream *stream;
 	 void *address;
 	};
 	address = luaL_checkudata(state, stack, LUA_FILEHANDLE);
-	return stream;
+	return stream->f;
 }
-
-// Special case of C FILE stream
-
-template <> inline
-FILE *lux_to<FILE*>(lua_State *state, int stack)
-{
-	return lux_to<luaL_Stream*>(state, stack)->f;
-}
-
 
 #endif // file
 

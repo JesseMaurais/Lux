@@ -36,7 +36,7 @@ print('d = ' .. tostring(d))
 
 e = char.new('Hello World!\n')
 print(tostring(e)) -- numeric form
-char.fputs(e, io.stdout) -- text formi
+char.puts(e) -- text form
 
 --[[ Arrays can be also be written as binary chunks
 f = long.new{9829, 32, 956, 945, 952, 951, 956, 945, 964, 953, 954, 940, 10}

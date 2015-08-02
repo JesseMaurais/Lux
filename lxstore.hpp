@@ -33,11 +33,13 @@ template <class User> struct lux_Pack<User*> : lux_Type<User*>
 {
 	User *data;
 	ssize_t size;
+	int ref;
 
 	lux_Pack(User *data=nullptr, ssize_t size=0)
 	{
 		this->data = data;
 		this->size = size;
+		ref = LUA_NOREF;
 	}
 };
 
@@ -47,8 +49,9 @@ template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 {
 	lux_Pack(const User *data=nullptr, ssize_t size=0)
 	{
-		this->data = const_cast<User*>(data);
+		this->data = const_cast<User*>(data); // Dangerous?
 		this->size = size;
+		this->ref = LUA_NOREF;
 	}
 };
 
@@ -59,7 +62,8 @@ template <class User, size_t Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
 	lux_Pack(User *data=nullptr)
 	{
 		this->data = data;
-		this->size = -Size; // Not owner
+		this->size = -Size; // Not owner -- note the sign
+		this->ref = LUA_NOREF;
 	}
 };
 
@@ -91,10 +95,18 @@ template <class User> struct lux_Store : lux_Pack<User>
 
 	static Type *push(lua_State *state, User data, ssize_t size=0)
 	{
-		return new (state) Type(data, size);
+		auto user = new (state) Type(data, size);
+		luaL_setmetatable(state, Type::name);
+		return user;
 	}
 
-	static User &to(lua_State *state, int stack=1)
+	static User opt(lua_State *state, int stack, User opt)
+	{
+		auto user = test(state, stack);
+		return user ? user->data : opt;
+	}
+
+	static User to(lua_State *state, int stack=1)
 	{
 		return check(state, stack)->data;
 	}
@@ -130,9 +142,20 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 
 	static Type *push(lua_State *state, User *data, ssize_t size=0)
 	{
-		if (data) return new (state) Type(data, size);
+		if (data)
+		{
+			auto user = new (state) Type(data, size);
+			luaL_setmetatable(state, Type::name);
+			return user;
+		}
 		lua_pushnil(state);
 		return nullptr;
+	}
+
+	static User *opt(lua_State *state, int stack=1, User *opt=nullptr)
+	{
+		auto user = test(state, stack);
+		return user ? user->data : opt;
 	}
 
 	static User *to(lua_State *state, int stack=1)
@@ -141,8 +164,44 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 		return check(state, stack)->data;
 	}
 
+	static Type* push(lua_State *state, User *data, ssize_t size, int stack)
+	{
+		auto user = push(state, data, size);
+		// Userdata that we will reference
+		auto array = check(state, stack);
+		// Not null and an array
+		if (user and array->size)
+		{
+			// Store ref numbers in the metatable
+			luaL_getmetatable(state, Type::name);
+			// Check if data owner
+			if (array->size < 0)
+			{
+			// Reference the data owner instead
+			lua_rawgeti(state, -1, array->ref);
+			}
+			else
+			{
+			// Copy the data to reference
+			lua_pushvalue(state, stack);
+			}
+			// Create a unique reference
+			user->ref = luaL_ref(state, -2);
+			// Remove metatable
+			lua_pop(state, 1);
+		}
+		return user;
+	}
+
 	using lux_Pack<User*>::lux_Pack;
 };
+
+/* Special care is taken for pointers to data types since we want to have a
+ * common interface for strings, arrays, and pointers the way that C treats
+ * them but we want Lua code to be guarded against common errors in pointer
+ * arithmetic, like segfaults. Also, Lua is garbage collected so we have to
+ * maintain references.
+ */
 
 #endif // file
 

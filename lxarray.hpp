@@ -8,7 +8,7 @@
 #include "lxchars.hpp"
 #include "lxerror.hpp"
 
-// Emulate C arrays/pointers in Lua
+// Emulate C strings/arrays/pointers in Lua
 
 template <class User> struct lux_Array
 {
@@ -32,7 +32,8 @@ template <class User> struct lux_Array
 			size = 0; 
 		  	break;
 		  case LUA_TNUMBER:
-			size = lux_to<int>(state, 1);
+			size = lua_tointeger(state, 1);
+			lux_checkarg(state, 1, 0 < size);
 			data = new User [size];
 			break;
 		  case LUA_TTABLE:
@@ -62,7 +63,6 @@ template <class User> struct lux_Array
 		};
 		// Put the array on the stack
 		Type::push(state, data, size);
-		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
 
@@ -72,6 +72,12 @@ template <class User> struct lux_Array
 		Type *user = Type::check(state);
 		// Owner's have non-negative sizes
 		if (0 < user->size) delete [] user->data;
+		else
+		{
+		luaL_getmetatable(state, Type::name);
+		// Free reference to the data owner
+		luaL_unref(state, -1, user->ref);
+		}
 		return 0;
 	}
 
@@ -135,12 +141,11 @@ template <class User> struct lux_Array
 			// Required storage
 			size_t size = n + m;
 			User *data = new User [size];
-			// Push userdata onto stack
-			new (state) Type(data, size);
-			luaL_setmetatable(state, Type::name);
 			// Copy contents of input arrays
 			memcpy(data + n, two->data, m * sizeof(User));
 			memcpy(data, one->data, n * sizeof(User));
+			// Put array onto the stack
+			Type::push(state, data, size);
 			return 1;
 		}
 		return 0;
@@ -149,18 +154,55 @@ template <class User> struct lux_Array
 	// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
-		User *data = lux_to<User*>(state, 1);
-		int offset = lux_to<int>(state, 2);
-		lux_push(state, data + offset);
+		Type *user = Type::check(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		// Force offset to be positive
+		lux_checkarg(state, 2, 0 <= offset);
+		// Adjust the pointer address
+		User *data = user->data + offset;
+		// Adjust the (phony) array size
+		ssize_t size = abs(user->size);
+		if (0 < size) // Non-pointer
+		{
+			// Ensure that we stay in range
+			lux_checkarg(state, 2, offset < size);
+			// Shrink range
+			size -= offset;
+			// Not owner
+			size = -size;
+		}
+		// Put referenced array on stack
+		Type::push(state, data, size, 1);
 		return 1;
 	}
 
 	// Pointer subtraction arithmetic
 	static int __sub(lua_State *state)
 	{
-		User *data = lux_to<User*>(state, 1);
-		int offset = lux_to<int>(state, 2);
-		lux_push(state, data - offset);
+		Type *user = Type::check(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		// Force offset to be positive
+		lux_checkarg(state, 2, 0 <= offset);
+		// Adjust the (phony) array size
+		ssize_t size = abs(user->size);
+		if (0 < size) // Non-pointer
+		{
+			// Ensure that we stay in range
+			lux_checkarg(state, 2, offset < size);
+			// Shrink range
+			size -= offset;
+			// Not owner
+			size = -size;
+			// Put referenced array on the stack
+			Type::push(state, user->data, size, 1);
+		}
+		else // Pointer
+		{
+			// Adjust the pointer address
+			User *data = user->data - offset;
+			// Put pointer on the stack
+			Type::push(state, data);
+		}
 		return 1;
 	}
 
@@ -170,9 +212,9 @@ template <class User> struct lux_Array
 		Type *user = Type::check(state, 1);
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
-		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
-		// Proportions used in shift
 		size_t size = abs(user->size);
+		lux_checkarg(state, 2, shift > 0 and size > 0);
+		// Proportions used in shift
 		size_t n = shift % size;
 		size_t m = size - n;
 		// Copy parts into new array
@@ -181,7 +223,6 @@ template <class User> struct lux_Array
 		memcpy(data + m, user->data, n * sizeof(User));
 		// Put array onto the stack
 		Type::push(state, data, size);
-		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
 
@@ -202,12 +243,11 @@ template <class User> struct lux_Array
 		memcpy(data + n, user->data, m * sizeof(User));
 		// Put array onto the stack
 		Type::push(state, data, size);
-		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
 
 	// Quick sort of the array elements
-	static int __qsort(lua_State *state)
+	static int __sort(lua_State *state)
 	{
 		// Element comparison operator used for quick sort
 		auto compare = [](const void *p1, const void *p2)->int
@@ -240,17 +280,13 @@ template <class User> struct lux_Array
 			return 1;
 		}
 		size_t size = abs(one->size);
-		// Now we check each of the members
-		for (int item = 0; item < size; ++item)
+		// Equal if, and only if, all the bits are identical
+		if (memcmp(one->data, two->data, size * sizeof(User)))
 		{
-			// Not equal if any respective members don't
-			if (one->data[item] not_eq two->data[item])
-			{
-				lux_push(state, false);
-				return 1;
-			}
+			lux_push(state, false);
+			return 1;
 		}
-		// Must be equal
+		// Then arg1 == arg2
 		lux_push(state, true);
 		return 1;
 	}
@@ -275,6 +311,7 @@ template <class User> struct lux_Array
 				return 1;
 			}
 		}
+		// Then arg1 < arg2
 		lux_push(state, true);
 		return 1;
 	}
@@ -299,62 +336,69 @@ template <class User> struct lux_Array
 				return 1;
 			}
 		}
+		// Then arg1 <= arg2
 		lux_push(state, true);
 		return 1;
 	}
 
 	// Read as string from a file
-	static int __fgets(lua_State *state)
+	static int __gets(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
-		FILE *file = lux_to<FILE*>(state, 2);
+		FILE *file = lux_opt(state, 2, stdin);
 		// Buffer to store UTF-8 characters
-		char data[user->size * MB_CUR_MAX];
-		// Read from the file stream
+		ssize_t size = abs(user->size);
+		char data[size * MB_CUR_MAX];
+		// Using fgets on given file
 		fgets(data, sizeof(data), file);
 		// Conversion
 		lux_Chars shift;
-		ssize_t size = shift.to(user->data, data, sizeof(data));
+		size = shift.to(user->data, data, sizeof(data));
 		if (size < 0) return lux_perror(state);
-		// Return bytes read
+		// Return amount read
 		lux_push(state, size);
 		return 1;
 	}
 
 	// Write as string to a file
-	static int __fputs(lua_State *state)
+	static int __puts(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
-		FILE *file = lux_to<FILE*>(state, 2);
+		FILE *file = lux_opt(state, 2, stdout);
 		// Buffer to store UTF-8 characters
-		char data[user->size * MB_CUR_MAX];
+		ssize_t size = abs(user->size);
+		char data[size * MB_CUR_MAX];
 		// Conversion
 		lux_Chars shift;
-		ssize_t size = shift.from(data, user->data, user->size);
+		size = shift.from(data, user->data, size);
 		if (size < 0) return lux_perror(state);
-		// Write to the file stream
+		// Using fputs on given file
 		data[size] = '\0';
 		fputs(data, file);
 		return 0;
 	}
 
 	// Read binary elements from a file
-	static int __fread(lua_State *state)
+	static int __read(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
-		FILE *file = lux_to<FILE*>(state, 2);
-		size_t num = fread(user->data, user->size, sizeof(User), file);
-		lux_push(state, num);
+		FILE *file = lux_opt(state, 2, stdin);
+		// Using fread on given file
+		size_t size = abs(user->size);
+		size = fread(user->data, size, sizeof(User), file);
+		lux_push(state, size);
 		return 1;
 	}
 
 	// Write binary elements to a file
-	static int __fwrite(lua_State *state)
+	static int __write(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
-		FILE *file = lux_to<FILE*>(state, 2);
-		size_t num = fwrite(user->data, user->size, sizeof(User), file);
-		lux_push(state, num);
+		FILE *file = lux_opt(state, 2, stdout);
+		// Using fwrite on given file
+		size_t size = abs(user->size);
+		size = fwrite(user->data, size, sizeof(User), file);
+		lux_push(state, size);
 		return 1;
 	}
 
@@ -366,11 +410,11 @@ template <class User> struct lux_Array
 		luaL_Reg regs [] =
 		{
 		{"new", __new},
-		{"qsort", __qsort},
-		{"fgets", __fgets},
-		{"fputs", __fputs},
-		{"fread", __fread},
-		{"fwrite", __fwrite},
+		{"gets", __gets},
+		{"puts", __puts},
+		{"read", __read},
+		{"write", __write},
+		{"sort", __sort},
 		{"__tostring", __tostring},
 		{"__concat", __concat},
 		{"__newindex", __newindex},
