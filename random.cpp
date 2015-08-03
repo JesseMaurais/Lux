@@ -5,6 +5,7 @@
 
 template <class Base> struct Random
 {
+	// Basic storage implementation
 	typedef lux_Store<Base> Type;
 
 	// Create the random number generator
@@ -33,27 +34,35 @@ template <class Base> struct Random
 	// Generate a sequence of random numbers
 	static int __call(lua_State *state)
 	{
+		ssize_t size = 0;
 		auto user = Type::check(state, 1);
-		// If many, store them in a table
-		size_t size = luaL_optinteger(state, 2, 0);
-		if (size)
+		// Check second argument type
+		switch (lua_type(state, 2))
 		{
-			// Put into a table
-			lua_newtable(state);
-			// Generate random numbers in the table
-			for (int item = 0; item < size; item++)
-			{
-				lua_pushinteger(state, item);
-				auto value = user->data();
-				lux_push(state, value);
-				lua_settable(state, -3);
-			}
-		}
-		else
-		{
+		default:
+			// We only accept these types as arguments
+			return luaL_argerror(state, 2, "array, table, none");
+		case LUA_TNONE:
 			// Generate just one number
-			auto value = user->data();
-			lux_push(state, value);
+			lux_push(state, user->data());
+			break;
+		case LUA_TNUMBER:
+			size = lua_tointeger(state, 2);
+			// Create a new table
+			lua_newtable(state);
+			break;
+		case LUA_TUSERDATA: // array?
+			size = luaL_len(state, 2);
+			// Put it onto stack top
+			lua_pushvalue(state, 2);
+			break;
+		}
+		// Generate random numbers in the table
+		for (int item = 1; item <= size; item++)
+		{
+			lua_pushinteger(state, item);
+			lux_push(state, user->data());
+			lua_settable(state, -3);
 		}
 		return 1;
 	}
@@ -62,27 +71,35 @@ template <class Base> struct Random
 	template <class Distribution>
 	static int call(lua_State *state, Distribution &distribution)
 	{
+		size_t size = 0;
 		Type *user = Type::check(state, 1);
-		// If many, store them in a table
-		size_t size = luaL_optinteger(state, 2, 0);
-		if (size)
+		// Check second argument type
+		switch (lua_type(state, 2))
 		{
-			// Put into a table
-			lua_newtable(state);
-			// Generate random numbers in the table
-			for (int item = 0; item < size; item++)
-			{
-				lua_pushinteger(state, item);
-				auto value = distribution(user->data);
-				lux_push(state, value);
-				lua_settable(state, -3);
-			}
-		}
-		else
-		{
+		default:
+			// We only accept these types as arguments
+			return luaL_argerror(state, 2, "array, table, none");
+		case LUA_TNONE:
 			// Generate just one number
-			auto value = distribution(user->data);
-			lux_push(state, value);
+			lux_push(state, distribution(user->data));
+			break;
+		case LUA_TNUMBER:
+			size = lua_tointeger(state, 2);
+			// Create a new table
+			lua_newtable(state);
+			break;
+		case LUA_TUSERDATA: // array?
+			size = luaL_len(state, 2);
+			// Put it onto stack top
+			lua_pushvalue(state, 2);
+			break;
+		}
+		// Generate random numbers in the table
+		for (int item = 1; item <= size; item++)
+		{
+			lua_pushinteger(state, item);
+			lux_push(state, distribution(user->data));
+			lua_settable(state, -3);
 		}
 		return 1;
 	}
@@ -91,7 +108,7 @@ template <class Base> struct Random
 	{
 		auto a = luaL_optnumber(state, 3, 0.0);
 		auto b = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (a < b), 4, "a < b");
+		lux_checkarg(state, 4, a < b);
 
 		std::uniform_real_distribution<lua_Number> distribution(a, b);
 		return call(state, distribution);
@@ -100,7 +117,7 @@ template <class Base> struct Random
 	static int bernoulli(lua_State *state)
 	{
 		auto p = luaL_optnumber(state, 3, 0.5);
-		luaL_argcheck(state, (0 < p and p < 1), 3, "0 < p < 1");
+		lux_checkarg(state, 3, 0 < p and p < 1);
 
 		std::bernoulli_distribution distribution(p);
 		return call(state, distribution);
@@ -109,9 +126,9 @@ template <class Base> struct Random
 	static int binomial(lua_State *state)
 	{
 		auto n = luaL_optinteger(state, 3, 1);
-		luaL_argcheck(state, (n > 0), 3, "n > 0");
+		lux_checkarg(state, 3, 0 < n);
 		auto p = luaL_optnumber(state, 4, 0.5);
-		luaL_argcheck(state, (0 < p and p < 1), 3, "0 < p < 1");
+		lux_checkarg(state, 4, 0 < p and p < 1);
 
 		std::binomial_distribution<lua_Integer> distribution(n, p);
 		return call(state, distribution);
@@ -120,7 +137,7 @@ template <class Base> struct Random
 	static int geometric(lua_State *state)
 	{
 		auto p = luaL_optnumber(state, 3, 0.5);
-		luaL_argcheck(state, (0 < p and p < 1), 3, "0 < p < 1");
+		lux_checkarg(state, 3, 0 < p and p < 1);
 
 		std::geometric_distribution<lua_Integer> distribution(p);
 		return call(state, distribution);
@@ -129,9 +146,9 @@ template <class Base> struct Random
 	static int negative_binomial(lua_State *state)
 	{
 		auto k = luaL_optinteger(state, 3, 1);
-		luaL_argcheck(state, (k > 0), 3, "k > 0");
+		lux_checkarg(state, 3, 0 < k);
 		auto p = luaL_optnumber(state, 4, 0.5);
-		luaL_argcheck(state, (0 < p and p < 1), 4, "0 < p < 1");
+		lux_checkarg(state, 4, 0 < p and p < 1);
 
 		using namespace std;
 		negative_binomial_distribution<lua_Integer> distribution(k, p);
@@ -141,7 +158,7 @@ template <class Base> struct Random
 	static int poisson(lua_State *state)
 	{
 		auto mu = luaL_optinteger(state, 3, 1.0);
-		luaL_argcheck(state, (mu > 0), 3, "mu > 0");
+		lux_checkarg(state, 3, 0 < mu);
 
 		std::poisson_distribution<lua_Integer> distribution(mu);
 		return call(state, distribution);
@@ -150,7 +167,7 @@ template <class Base> struct Random
 	static int exponential(lua_State *state)
 	{
 		auto lambda = luaL_optnumber(state, 3, 1.0);
-		luaL_argcheck(state, (lambda > 0), 3, "lambda > 0");
+		lux_checkarg(state, 3, 0 < lambda);
 
 		std::exponential_distribution<lua_Number> distribution(lambda);
 		return call(state, distribution);
@@ -159,9 +176,9 @@ template <class Base> struct Random
 	static int gamma(lua_State *state)
 	{
 		auto alpha = luaL_optnumber(state, 3, 1.0);
-		luaL_argcheck(state, (alpha > 0), 3, "alpha > 0");
+		lux_checkarg(state, 3, 0 < alpha);
 		auto beta = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (beta > 0), 4, "beta > 0");
+		lux_checkarg(state, 4, 0 < beta);
 
 		std::gamma_distribution<lua_Number> distribution(alpha, beta);
 		return call(state, distribution);
@@ -170,9 +187,9 @@ template <class Base> struct Random
 	static int weibull(lua_State *state)
 	{
 		auto a = luaL_optnumber(state, 3, 1.0);
-		luaL_argcheck(state, (a > 0), 3, "a > 0");
+		lux_checkarg(state, 3, 0 < a);
 		auto b = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (b > 0), 4, "b > 0");
+		lux_checkarg(state, 4, 0 < b);
 
 		std::weibull_distribution<lua_Number> distribution(a, b);
 		return call(state, distribution);
@@ -191,7 +208,7 @@ template <class Base> struct Random
 	{
 		auto mu = luaL_optnumber(state, 3, 0.0);
 		auto sigma = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (sigma > 0), 4, "sigma > 0");
+		lux_checkarg(state, 4, 0 < sigma);
 
 		std::normal_distribution<lua_Number> distribution(mu, sigma);
 		return call(state, distribution);
@@ -201,7 +218,7 @@ template <class Base> struct Random
 	{
 		auto mu = luaL_optnumber(state, 3, 0.0);
 		auto sigma = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (sigma > 0), 4, "sigma > 0");
+		lux_checkarg(state, 4, 0 < sigma);
 
 		std::lognormal_distribution<lua_Number> distribution(mu, sigma);
 		return call(state, distribution);
@@ -210,7 +227,7 @@ template <class Base> struct Random
 	static int chi_squared(lua_State *state)
 	{
 		auto n = luaL_optinteger(state, 3, 1);
-		luaL_argcheck(state, (n > 0), 3, "n > 0");
+		lux_checkarg(state, 3, 0 < n);
 
 		std::chi_squared_distribution<lua_Number> distribution(n);
 		return call(state, distribution);
@@ -220,7 +237,7 @@ template <class Base> struct Random
 	{
 		auto pos = luaL_optnumber(state, 3, 0.0);
 		auto scale = luaL_optnumber(state, 4, 1.0);
-		luaL_argcheck(state, (scale > 0), 4, "scale > 0");
+		lux_checkarg(state, 4, 0 < scale);
 
 		std::cauchy_distribution<lua_Number> distribution(pos, scale);
 		return call(state, distribution);
@@ -229,9 +246,9 @@ template <class Base> struct Random
 	static int fisher(lua_State *state)
 	{
 		auto m = luaL_optinteger(state, 3, 1);
-		luaL_argcheck(state, (m > 0), 3, "m > 0");
+		lux_checkarg(state, 3, 0 < m);
 		auto n = luaL_optinteger(state, 4, 1);
-		luaL_argcheck(state, (n > 0), 4, "n > 0");
+		lux_checkarg(state, 4, 0 < n);
 
 		std::fisher_f_distribution<lua_Number> distribution(m, n);
 		return call(state, distribution);
@@ -240,7 +257,7 @@ template <class Base> struct Random
 	static int student(lua_State *state)
 	{
 		auto n = luaL_optinteger(state, 3, 1);
-		luaL_argcheck(state, (n > 0), 3, "n > 0");
+		lux_checkarg(state, 3, 0 < n);
 
 		std::student_t_distribution<lua_Number> distribution(n);
 		return call(state, distribution);

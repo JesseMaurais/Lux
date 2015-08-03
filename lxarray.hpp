@@ -8,7 +8,7 @@
 #include "lxchars.hpp"
 #include "lxerror.hpp"
 
-// Emulate C strings/arrays/pointers in Lua
+// Emulate C strings/arrays/pointers in Lua with extra operations
 
 template <class User> struct lux_Array
 {
@@ -92,19 +92,33 @@ template <class User> struct lux_Array
 	// Read array data at offset
 	static int __index(lua_State *state)
 	{
-		User *data = lux_to<User*>(state, 1);
-		int offset = lux_to<int>(state, 2);
-		lux_push(state, data[offset]);
+		Type *user = Type::check(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		// Pointer indexing forbidden
+		size_t size = abs(user->size);
+		lux_checkarg(state, 1, 0 < size);
+		// Ensure we stay in array bounds
+		lux_checkarg(state, 2, 0 < offset);
+		lux_checkarg(state, 2, offset <= size);
+		// C arrays are indexed from 0 rather than 1
+		lux_push(state, user->data[offset-1]);
 		return 1;
 	}
 
 	// Write array data at offset
 	static int __newindex(lua_State *state)
 	{
-		User *data = lux_to<User*>(state, 1);
-		int offset = lux_to<int>(state, 2);
-		data[offset] = lux_to<User>(state, 3);
-		return 0;
+		Type *user = Type::check(state, 1);
+		int offset = luaL_checkinteger(state, 2);
+		// Pointer indexing forbidden
+		size_t size = abs(user->size);
+		lux_checkarg(state, 1, 0 < size);
+		// Ensure we stay in array bounds
+		lux_checkarg(state, 2, 0 < offset);
+		lux_checkarg(state, 2, offset <= size);
+		// C arrays are indexed from 0 rather than 1
+		user->data[offset-1] = lux_to<User>(state, 3);
+		return 1;
 	}
 
 	// String conversion for printing
@@ -121,7 +135,7 @@ template <class User> struct lux_Array
 			if (item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
-			buffer.addvalue();
+			buffer.addvalue(); // Pops string
 		}
 		buffer.push();
 		return 1;
@@ -142,8 +156,8 @@ template <class User> struct lux_Array
 			size_t size = n + m;
 			User *data = new User [size];
 			// Copy contents of input arrays
-			memcpy(data + n, two->data, m * sizeof(User));
 			memcpy(data, one->data, n * sizeof(User));
+			memcpy(data + n, two->data, m * sizeof(User));
 			// Put array onto the stack
 			Type::push(state, data, size);
 			return 1;
@@ -164,7 +178,7 @@ template <class User> struct lux_Array
 		ssize_t size = abs(user->size);
 		if (0 < size) // Non-pointer
 		{
-			// Ensure that we stay in range
+			// Ensure that we stay in array range
 			lux_checkarg(state, 2, offset < size);
 			// Shrink range
 			size -= offset;
@@ -206,43 +220,88 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Shift values left by given amount
+	// Shift elements left by given amount
 	static int __shl(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
+		lux_checkarg(state, 2, 0 < shift);
 		size_t size = abs(user->size);
-		lux_checkarg(state, 2, shift > 0 and size > 0);
+		lux_checkarg(state, 1, 0 < size);
 		// Proportions used in shift
 		size_t n = shift % size;
 		size_t m = size - n;
-		// Copy parts into new array
-		User *data = new User [size];
-		memcpy(data, user->data + n, m * sizeof(User));
-		memcpy(data + m, user->data, n * sizeof(User));
-		// Put array onto the stack
-		Type::push(state, data, size);
+		// Swap memory
+		if (n < m)
+		{
+			User temp[m]; // Copy to avoid overwrite
+			memcpy(temp, user->data + n, m*sizeof(User));
+			memcpy(user->data + m, user->data, n*sizeof(User));
+			memcpy(user->data, temp, m*sizeof(User));
+		}
+		else
+		{
+			User temp[n]; // Copy to avoid overwrite
+			memcpy(temp, user->data, n*sizeof(User));
+			memcpy(user->data, user->data + n, m*sizeof(User));
+			memcpy(user->data + m, temp, n*sizeof(User));
+		}
+		// Return a reference
+		lua_pushvalue(state, 1);
 		return 1;
 	}
 
-	// Shift values right by given amount
+	// Shift element right by given amount
 	static int __shr(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
-		luaL_argcheck(state, (shift > 0), 2, "shift > 0");
-		// Proportions used in shift
+		lux_checkarg(state, 2, 0 < shift);
 		size_t size = abs(user->size);
+		lux_checkarg(state, 1, 0 < size);
+		// Proportions used in shift
 		size_t n = shift % size;
 		size_t m = size - n;
-		// Copy part into new array
-		User *data = new User [size];
-		memcpy(data, user->data + m, n * sizeof(User));
-		memcpy(data + n, user->data, m * sizeof(User));
-		// Put array onto the stack
-		Type::push(state, data, size);
+		// Swap memory
+		if (m < n)
+		{
+			User temp[n]; // Copy to avoid overwrite
+			memcpy(temp, user->data + m, n*sizeof(User));
+			memcpy(user->data + n, user->data, m*sizeof(User));
+			memcpy(user->data, temp, n*sizeof(User));
+		}
+		else
+		{
+			User temp[m]; // Copy to avoid overwrite
+			memcpy(temp, user->data, m*sizeof(User));
+			memcpy(user->data, user->data + m, n*sizeof(User));
+			memcpy(user->data + n, temp, m*sizeof(User));
+		}
+		// Return a reference
+		lua_pushvalue(state, 1);
+		return 1;
+	}
+
+	// Reverse elements in the array
+	static int __bnot(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		size_t size = abs(user->size);
+		// Array rather than a pointer
+		lux_checkarg(state, 1, 0 < size);
+		// Half size of the array
+		size_t half = size >> 1;
+		User temp; // Swap elements
+		for (int i = 0, j = size - 1; i < half; ++i, --j)
+		{
+			temp = user->data[i];
+			user->data[i] = user->data[j];
+			user->data[j] = temp;
+		}
+		// Return a reference
+		lua_pushvalue(state, 1);
 		return 1;
 	}
 
@@ -267,16 +326,16 @@ template <class User> struct lux_Array
 	{
 		Type *one = Type::check(state, 1);
 		Type *two = Type::check(state, 2);
-		// Are equal if pointers are
-		if (one->data == two->data)
-		{
-			lux_push(state, true);
-			return 1;
-		}
 		// Not equal if sizes aren't
 		if (one->size != two->size)
 		{
 			lux_push(state, false);
+			return 1;
+		}
+		// Are equal if pointers are
+		if (one->data == two->data)
+		{
+			lux_push(state, true);
 			return 1;
 		}
 		size_t size = abs(one->size);
@@ -286,7 +345,7 @@ template <class User> struct lux_Array
 			lux_push(state, false);
 			return 1;
 		}
-		// Then arg1 == arg2
+		// Then one == two
 		lux_push(state, true);
 		return 1;
 	}
@@ -296,7 +355,7 @@ template <class User> struct lux_Array
 	{
 		Type *one = Type::check(state, 1);
 		Type *two = Type::check(state, 2);
-		// Genuine rray sizes
+		// Genuine array sizes
 		size_t n = abs(one->size);
 		size_t m = abs(two->size);
 		// Find the smaller of them
@@ -311,7 +370,7 @@ template <class User> struct lux_Array
 				return 1;
 			}
 		}
-		// Then arg1 < arg2
+		// Then one < two
 		lux_push(state, true);
 		return 1;
 	}
@@ -321,7 +380,7 @@ template <class User> struct lux_Array
 	{
 		Type *one = Type::check(state, 1);
 		Type *two = Type::check(state, 2);
-		// Genuine rray sizes
+		// Genuine array sizes
 		size_t n = abs(one->size);
 		size_t m = abs(two->size);
 		// Find the smaller of them
@@ -336,7 +395,7 @@ template <class User> struct lux_Array
 				return 1;
 			}
 		}
-		// Then arg1 <= arg2
+		// Then one <= two
 		lux_push(state, true);
 		return 1;
 	}
@@ -419,11 +478,12 @@ template <class User> struct lux_Array
 		{"__concat", __concat},
 		{"__newindex", __newindex},
 		{"__index", __index},
+		{"__len", __len},
 		{"__add", __add},
 		{"__sub", __sub},
 		{"__shl", __shl},
 		{"__shr", __shr},
-		{"__len", __len},
+		{"__bnot", __bnot},
 		{"__eq", __eq},
 		{"__lt", __lt},
 		{"__le", __le},

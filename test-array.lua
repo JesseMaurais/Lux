@@ -2,45 +2,35 @@ print "Test the use of C arrays for data storage"
 
 require 'array' -- load the array module
 
--- Calculate an exponential sequence
+print 'Store x for x from 1 to 5 in array "a"'
 
-a = int.new(10)
-for i = 0, #a-1 do
-	a[i] = 2^i
-end
+a = int.new(5)
+for x = 1, #a do a[x] = x end
 print('a = ' .. tostring(a))
 
--- Pointer arithmetic is supported on arrays
+print 'We can do arithmetic adjustments on the array bounds'
 
-b = a + 5
-assert(#b == 0)
-print('b = a + 5')
-for i = 0, 4 do
-	print('b['..i..'] = '..b[i])
+print('a + 2 = ' .. tostring(a + 2))
+print('a - 2 = ' .. tostring(a - 2))
+
+print 'We can rotate the elements of an array as well'
+
+print('a << 3 = ' .. tostring(a << 3))
+print('a >> 3 = ' .. tostring(a >> 3))
+
+collectgarbage() -- clean away the stray pointers we made
+
+print 'Floating point precision types can store 1/x'
+
+b = double.new(#a)
+for x = 1, #b do
+	b[x] = 1/a[x]
 end
+print('b = ' .. tostring(b))
 
--- Floating point precision types too
+print 'Strings are decoded according to the locale'
 
-c = double.new(10)
-for i = 0, #c-1 do
-	c[i] = 1/a[i]
-end
-print('c = ' .. tostring(c))
-
--- Constructor by table values
-
-d = short.new{7, 10, 6, 14}
-print('d = ' .. tostring(d))
-
--- Strings treated as UTF-8 encoded
-
-e = char.new('Hello World!\n')
-print(tostring(e)) -- numeric form
-char.puts(e) -- text form
-
---[[ Arrays can be also be written as binary chunks
-f = long.new{9829, 32, 956, 945, 952, 951, 956, 945, 964, 953, 954, 940, 10}
-out = io.open("test.bin", "wb")
-long.fwrite(f, out)
---]]
+c = char.new('Hello World!\n')
+char.puts(c) -- text form
+print('code points = ' .. tostring(c))
 
