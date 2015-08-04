@@ -201,14 +201,14 @@ template <class User> struct lux_Array
 	{
 		Type *user = Type::check(state, 1);
 		int offset = luaL_checkinteger(state, 2);
-		// Force offset to be positive
-		lux_checkarg(state, 2, 0 <= offset);
 		// Adjust the pointer address
 		User *data = user->data + offset;
 		// Adjust the (phony) array size
 		ssize_t size = abs(user->size);
 		if (0 < size) // Non-pointer
 		{
+			// Force offset to be positive
+			lux_checkarg(state, 2, 0 <= offset);
 			// Ensure that we stay in array range
 			lux_checkarg(state, 2, offset < size);
 			// Shrink range
@@ -224,12 +224,12 @@ template <class User> struct lux_Array
 	{
 		Type *user = Type::check(state, 1);
 		int offset = luaL_checkinteger(state, 2);
-		// Force offset to be positive
-		lux_checkarg(state, 2, 0 <= offset);
 		// Adjust the (phony) array size
 		ssize_t size = abs(user->size);
 		if (0 < size) // Non-pointer
 		{
+			// Force offset to be positive
+			lux_checkarg(state, 2, 0 <= offset);
 			// Ensure that we stay in range
 			lux_checkarg(state, 2, offset < size);
 			// Shrink range
