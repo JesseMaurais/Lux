@@ -3,6 +3,8 @@
 
 #include "lxalloc.hpp"
 #include <typeinfo>
+#include <cstdlib>
+#include <cassert>
 
 // Metadata for type system
 
@@ -164,25 +166,29 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 		return check(state, stack)->data;
 	}
 
-	static Type* push(lua_State *state, User *data, ssize_t size, int stack)
+	// Push with reference to data owner where this is at stack index
+	Type* push(lua_State *state, User *data, size_t size, int stack)
 	{
-		auto user = push(state, data, size);
-		// Userdata that we will reference
-		auto array = check(state, stack);
-		// Not null and an array
-		if (user and array->size)
+		// Put data on the stack (not as owner)
+		auto user = push(state, data, - size);
+		// Not null and is an array
+		if (user and this->size not_eq 0)
 		{
-			// Store ref numbers in the metatable
+			// Begin pointer in range
+			assert(this->data <= data);
+			// End pointer is also in range
+			assert(this->data + abs(this->size) >= data + size);
+			// Store reference numbers in the metatable
 			luaL_getmetatable(state, Type::name);
-			// Check if data owner
-			if (array->size < 0)
+			// This is data owner?
+			if (this->size < 0)
 			{
-			// Reference the data owner instead
-			lua_rawgeti(state, -1, array->ref);
+			// Reference the owner instead
+			lua_rawgeti(state, -1, this->ref);
 			}
 			else
 			{
-			// Copy the data to reference
+			// Copy array to reference
 			lua_pushvalue(state, stack);
 			}
 			// Create a unique reference
@@ -200,7 +206,8 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
  * common interface for strings, arrays, and pointers the way that C treats
  * them but we want Lua code to be guarded against common errors in pointer
  * arithmetic, like segfaults. Also, Lua is garbage collected so we have to
- * maintain references.
+ * maintain references to the original data for sub-arrays which point into
+ * true arrays.
  */
 
 #endif // file

@@ -58,7 +58,7 @@ template <class Base> struct Random
 			break;
 		}
 		// Generate random numbers in the table
-		for (int item = 1; item <= size; item++)
+		for (int item = 1; item <= size; ++item)
 		{
 			lua_pushinteger(state, item);
 			lux_push(state, user->data());
@@ -95,7 +95,7 @@ template <class Base> struct Random
 			break;
 		}
 		// Generate random numbers in the table
-		for (int item = 1; item <= size; item++)
+		for (int item = 1; item <= size; ++item)
 		{
 			lua_pushinteger(state, item);
 			lux_push(state, distribution(user->data));

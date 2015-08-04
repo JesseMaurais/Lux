@@ -23,14 +23,12 @@ template <class User> struct lux_Array
 		ssize_t length;
 		size_t size;
 		User *data;
-		// Constructor arguments
+		// Check constructor arguments
 		switch (lua_type(state, 1))
 		{
-		  case LUA_TNIL:
-		  case LUA_TNONE:
-			data = nullptr;
-			size = 0; 
-		  	break;
+		  default:
+			// We only construct from these argument types
+			return luaL_argerror(state, 1, "number, table, string");
 		  case LUA_TNUMBER:
 			size = lua_tointeger(state, 1);
 			lux_checkarg(state, 1, 0 < size);
@@ -58,8 +56,6 @@ template <class User> struct lux_Array
 			data = new User [length];
 			size = shift.to(data, string, length);
 			break;
-		  default:
-			return luaL_argerror(state, 1, "invalid type");
 		};
 		// Put the array on the stack
 		Type::push(state, data, size);
@@ -70,7 +66,7 @@ template <class User> struct lux_Array
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		// Owner's have non-negative sizes
+		// Only owner has non-negative size
 		if (0 < user->size) delete [] user->data;
 		else
 		{
@@ -101,7 +97,7 @@ template <class User> struct lux_Array
 		lux_checkarg(state, 2, 0 < offset);
 		lux_checkarg(state, 2, offset <= size);
 		// C arrays are indexed from 0 rather than 1
-		lux_push(state, user->data[offset-1]);
+		lux_push(state, user->data[--offset]);
 		return 1;
 	}
 
@@ -117,7 +113,7 @@ template <class User> struct lux_Array
 		lux_checkarg(state, 2, 0 < offset);
 		lux_checkarg(state, 2, offset <= size);
 		// C arrays are indexed from 0 rather than 1
-		user->data[offset-1] = lux_to<User>(state, 3);
+		user->data[--offset] = lux_to<User>(state, 3);
 		return 1;
 	}
 
@@ -129,7 +125,7 @@ template <class User> struct lux_Array
 		// Build up a string
 		lux_Buffer buffer(state);
 		// Iterate over each item in the array
-		for (auto item = 0; item < size; ++item)
+		for (int item = 0; item < size; ++item)
 		{
 			// Add separator only after first
 			if (item) buffer.addstring(", ");
@@ -165,6 +161,41 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
+	// Divide into equal sub-arrays
+	static int __div(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Genuine array size
+		size_t size = abs(user->size);
+		// Array rather than pointer
+		lux_checkarg(state, 1, 0 < size);
+		// Get divisor for the partition
+		ssize_t parts = luaL_checkinteger(state, 2);
+		// Force divisor to be positive
+		lux_checkarg(state, 2, 0 < parts);
+		// Calculate the fraction
+		auto fract = div(size, parts);
+		// Force the division to be complete
+		lux_checkarg(state, 2, fract.rem == 0);
+		// Array data iterator
+		User *data = user->data;
+		// Store in new table
+		lua_newtable(state);
+		// Put the sub-array partitions onto the stack
+		for (int item = 1; item <= parts; ++item)
+		{
+			// Indexed from 1 like arrays
+			lua_pushinteger(state, item);
+			// Put referenced array offset onto the stack
+			user->push(state, data, fract.quot, 1);
+			// Store in table field
+			lua_settable(state, -3);
+			// Next partition
+			data += fract.quot;
+		}
+		return 1;
+	}
+
 	// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
@@ -182,11 +213,9 @@ template <class User> struct lux_Array
 			lux_checkarg(state, 2, offset < size);
 			// Shrink range
 			size -= offset;
-			// Not owner
-			size = -size;
 		}
 		// Put referenced array on stack
-		Type::push(state, data, size, 1);
+		user->push(state, data, size, 1);
 		return 1;
 	}
 
@@ -205,10 +234,8 @@ template <class User> struct lux_Array
 			lux_checkarg(state, 2, offset < size);
 			// Shrink range
 			size -= offset;
-			// Not owner
-			size = -size;
 			// Put referenced array on the stack
-			Type::push(state, user->data, size, 1);
+			user->push(state, user->data, size, 1);
 		}
 		else // Pointer
 		{
@@ -340,7 +367,7 @@ template <class User> struct lux_Array
 		}
 		size_t size = abs(one->size);
 		// Equal if, and only if, all the bits are identical
-		if (memcmp(one->data, two->data, size * sizeof(User)))
+		if (memcmp(one->data, two->data, size * sizeof(User)) not_eq 0)
 		{
 			lux_push(state, false);
 			return 1;
@@ -479,6 +506,7 @@ template <class User> struct lux_Array
 		{"__newindex", __newindex},
 		{"__index", __index},
 		{"__len", __len},
+		{"__div", __div},
 		{"__add", __add},
 		{"__sub", __sub},
 		{"__shl", __shl},
