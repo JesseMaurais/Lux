@@ -9,7 +9,7 @@
  * functions with/without return values, and ones with/without class objects.
  * Additionally, we wrap these in another function which will call the others
  * but will catch any standard C++ exceptions and report them to Lua, so that
- * ther interpreter can perform a stack trace. Finally, a preprocessing macro
+ * it's interpreter can perform a stack trace. Finally, a preprocessing macro
  * is provided to simply "cast" an arbitrary C++ function, which really means
  * wrapping it again in an anonymous (lambda) function. All the wrapping will
  * be inlined away at compile time. 
