@@ -14,9 +14,10 @@
  * system related functions. Finally, arrays can store character data just as
  * C does it, only that arrays implicitly support multibyte decoding assuming
  * the input is in the Unicode transformation format. Lua strings are decoded
- * this way to the bit width of the array type.
+ * this way to the bit width of the array type. 
  *
  * See lxstore.hpp for the storage classes and lxchars.hpp for char decoding.
+ * See array.cpp for the C++ source code that compiles into the array module. 
  */
 
 #include "lxalloc.hpp"
