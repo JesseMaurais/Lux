@@ -55,9 +55,9 @@ int lux_thunk(lua_State *state, Res (Obj::*fun)(Args...))
 
 #include <exception>
 
-template <typename Function>
- inline int lux_nothunk(lua_State *state, Function fun) 
- {
+template <typename Function> inline
+inline int lux_nothunk(lua_State *state, Function fun) 
+{
 	try
 	{
 	return lux_thunk(state, fun);
@@ -70,7 +70,7 @@ template <typename Function>
 	{
 	return luaL_error(state, "C++ exception: ...");
 	}
- }
+}
 
 // Wrap the above thunks in an anonymous function compatible with Lua
 
