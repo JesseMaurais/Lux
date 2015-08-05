@@ -9,14 +9,15 @@
  * memory for an object. To do this, the following overloads will do given a
  * lua_State pointer as an argument.
  *
- *	new (state) ObjectClass(args...);
+ *	auto obj = new (state) Type(args...);
  *
  * There is no need to capture the return value since this pointer is placed
  * on the stack. The one caveat is that Lua will not call the destructor for
  * your C++ class unless you set it up in the __gc metatable method. If this
- * is not done, any memory that your class allocated will not be freed. Your
- * program will have memory leaks. Using std::shared_ptr will not avoid this
- * problem. You are better off using the higher level constructs in Lux.
+ * is not done, any resources that your class has will not be freed, so that
+ * your program might get memory leaks. However, this problem does not occur
+ * if your class does not allocate resources (memory) which is the case with
+ * ordinary C structs and unions. 
  */
 
 #include "lua.hpp"

@@ -5,7 +5,7 @@
  * This is the preferred implementation of C arrays and pointers for Lua. The
  * array is guaranteed to be a contiguous area of memory to which writing and
  * reading elements is done with the index metamethods. Several operations to
- * arrays are also provided through other metamethods like sorting, rotating,
+ * arrays are also provided through other metamethods like parting, rotating,
  * and reversing elements. Creating sub-arrays which point to some contiguous
  * area within an array is also possible, where changes in one array are also
  * reflected automatically in the other. Memory is properly reference counted
@@ -113,10 +113,16 @@ template <class User> struct lux_Array
 		size_t size = abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Ensure we stay in array bounds
-		lux_argcheck(state, 2, 0 < offset);
-		lux_argcheck(state, 2, offset <= size);
-		// C arrays are indexed from 0 rather than 1
+		if (0 < offset and offset <= size)
+		{
+		// Arrays are indexed from 1, not 0
 		lux_push(state, user->data[--offset]);
+		}
+		else
+		{
+		// By convention
+		lua_pushnil(state);
+		}
 		return 1;
 	}
 
@@ -129,11 +135,12 @@ template <class User> struct lux_Array
 		size_t size = abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Ensure we stay in array bounds
-		lux_argcheck(state, 2, 0 < offset);
-		lux_argcheck(state, 2, offset <= size);
-		// C arrays are indexed from 0 rather than 1
+		if (0 < offset and offset <= size)
+		{
+		// Arrays are indexed from 1 rather than 0
 		user->data[--offset] = lux_to<User>(state, 3);
-		return 1;
+		}
+		return 0;
 	}
 
 	/// String conversion for printing
@@ -181,7 +188,7 @@ template <class User> struct lux_Array
 	}
 
 	/// Divide into equal sub-arrays
-	static int __div(lua_State *state)
+	static int __mul(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		// Genuine array size
@@ -211,6 +218,41 @@ template <class User> struct lux_Array
 			lua_settable(state, -3);
 			// Next partition
 			data += fract.quot;
+		}
+		return 1;
+	}
+
+	/// Divide into equal sub-arrays
+	static int __div(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Genuine array size
+		size_t size = abs(user->size);
+		// Array rather than pointer
+		lux_argcheck(state, 1, 0 < size);
+		// Get divisor for the partition
+		ssize_t items = luaL_checkinteger(state, 2);
+		// Force divisor to be positive
+		lux_argcheck(state, 2, 0 < items);
+		// Calculate the fraction
+		auto fract = div(size, items);
+		// Force division to be complete
+		lux_argcheck(state, 2, fract.rem == 0);
+		// Array data iterator
+		User *data = user->data;
+		// Store in new table
+		lua_newtable(state);
+		// Put the sub-array partitions onto the stack
+		for (int item = 1; item <= fract.quot; ++item)
+		{
+			// Indexed from 1 like arrays
+			lua_pushinteger(state, item);
+			// Put referenced array offset onto the stack
+			user->push(state, data, items, 1);
+			// Store in table field
+			lua_settable(state, -3);
+			// Next partition
+			data += items;
 		}
 		return 1;
 	}
@@ -525,6 +567,7 @@ template <class User> struct lux_Array
 		{"__newindex", __newindex},
 		{"__index", __index},
 		{"__len", __len},
+		{"__mul", __mul},
 		{"__div", __div},
 		{"__add", __add},
 		{"__sub", __sub},

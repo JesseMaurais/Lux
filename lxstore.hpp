@@ -10,13 +10,13 @@
  * them but we want Lua code to be guarded against common errors in pointer
  * arithmetic, like segfaults. Also, Lua is garbage collected so we have to
  * maintain references to the original data for sub arrays which point into
- * parent arrays. All such information is stored in the 'size' field of our
+ * owning arrays. All such information is stored in the 'size' field of our
  * storage class. We use a signed size type so that the sign signifies that
  * the data is owned by this storage (when size > 0) whether it is refering
  * to another data owner (when size < 0) or whether it points into a system
  * designated memory area (when size = 0). In the second case a 'ref' field
- * also refers to the data owner. The lux_Array class has implementation of
- * all these features and more for using C strings/arrays/pointers in Lua.
+ * also refers to the data owner. The lux_Array class has implementated all
+ * of these features and more for using C strings/arrays/pointers in Lua.
  */
 
 #include "lxalloc.hpp"
@@ -33,7 +33,7 @@ template <class User> struct lux_Type
 /// By default we will employ the C++ typeid name which is compiler dependent
 template <class User> const char *lux_Type<User>::name = typeid(User).name();
 
-// Storage class for raw C user data types
+/// Storage class for raw C user data types
 template <class User> struct lux_Pack : lux_Type<User>
 {
 	User data;
@@ -113,7 +113,7 @@ template <class User> struct lux_Store : lux_Pack<User>
 	/// Create storage for user data and put it on the stack
 	static Type *push(lua_State *state, User data, ssize_t size=0)
 	{
-		auto user = new (state) Type(data, size);
+		auto user = new (state) Type(data);
 		luaL_setmetatable(state, Type::name);
 		return user;
 	}
