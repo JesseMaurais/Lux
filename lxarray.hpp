@@ -1,6 +1,24 @@
 #ifndef __lxarray__
 #define __lxarray__
 
+/**
+ * This is the preferred implementation of C arrays and pointers for Lua. The
+ * array is guaranteed to be a contiguous area of memory to which writing and
+ * reading elements is done with the index metamethods. Several operations to
+ * arrays are also provided through other metamethods like sorting, rotating,
+ * and reversing elements. Creating sub-arrays which point to some contiguous
+ * area within an array is also possible, where changes in one array are also
+ * reflected automatically in the other. Memory is properly reference counted
+ * in this case to avoid segfaults. Raw pointers are implemented in this same
+ * metatable but the array functions are not. Pointers are supported only for
+ * system related functions. Finally, arrays can store character data just as
+ * C does it, only that arrays implicitly support multibyte decoding assuming
+ * the input is in the Unicode transformation format. Lua strings are decoded
+ * this way to the bit width of the array type.
+ *
+ * See lxstore.hpp for the storage classes and lxchars.hpp for char decoding.
+ */
+
 #include "lxalloc.hpp"
 #include "lxstore.hpp"
 #include "lxstack.hpp"
@@ -8,14 +26,14 @@
 #include "lxchars.hpp"
 #include "lxerror.hpp"
 
-// Emulate C strings/arrays/pointers in Lua with extra operations
+/// Emulate C strings/arrays/pointers in Lua with extra operations
 
 template <class User> struct lux_Array
 {
 	// Pointer storage implementation
 	typedef lux_Store<User*> Type;
 
-	// Array allocation function
+	/// Array allocation function
 	static int __new(lua_State *state)
 	{
 		lux_Chars shift;
@@ -31,7 +49,7 @@ template <class User> struct lux_Array
 			return luaL_argerror(state, 1, "number, table, string");
 		  case LUA_TNUMBER:
 			size = lua_tointeger(state, 1);
-			lux_checkarg(state, 1, 0 < size);
+			lux_argcheck(state, 1, 0 < size);
 			data = new User [size];
 			break;
 		  case LUA_TTABLE:
@@ -62,7 +80,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Garbage collection callback
+	/// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -77,7 +95,7 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
-	// Size of array or zero if pointer
+	/// Size of array or zero if pointer
 	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -85,39 +103,39 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Read array data at offset
+	/// Read array data at offset
 	static int __index(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		int offset = luaL_checkinteger(state, 2);
 		// Pointer indexing forbidden
 		size_t size = abs(user->size);
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Ensure we stay in array bounds
-		lux_checkarg(state, 2, 0 < offset);
-		lux_checkarg(state, 2, offset <= size);
+		lux_argcheck(state, 2, 0 < offset);
+		lux_argcheck(state, 2, offset <= size);
 		// C arrays are indexed from 0 rather than 1
 		lux_push(state, user->data[--offset]);
 		return 1;
 	}
 
-	// Write array data at offset
+	/// Write array data at offset
 	static int __newindex(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		int offset = luaL_checkinteger(state, 2);
 		// Pointer indexing forbidden
 		size_t size = abs(user->size);
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Ensure we stay in array bounds
-		lux_checkarg(state, 2, 0 < offset);
-		lux_checkarg(state, 2, offset <= size);
+		lux_argcheck(state, 2, 0 < offset);
+		lux_argcheck(state, 2, offset <= size);
 		// C arrays are indexed from 0 rather than 1
 		user->data[--offset] = lux_to<User>(state, 3);
 		return 1;
 	}
 
-	// String conversion for printing
+	/// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -137,7 +155,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Concatenate arrays of same type
+	/// Concatenate arrays of same type
 	static int __concat(lua_State *state)
 	{
 		Type *one = Type::check(state, 1);
@@ -161,22 +179,22 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
-	// Divide into equal sub-arrays
+	/// Divide into equal sub-arrays
 	static int __div(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		// Genuine array size
 		size_t size = abs(user->size);
 		// Array rather than pointer
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Get divisor for the partition
 		ssize_t parts = luaL_checkinteger(state, 2);
 		// Force divisor to be positive
-		lux_checkarg(state, 2, 0 < parts);
+		lux_argcheck(state, 2, 0 < parts);
 		// Calculate the fraction
 		auto fract = div(size, parts);
 		// Force the division to be complete
-		lux_checkarg(state, 2, fract.rem == 0);
+		lux_argcheck(state, 2, fract.rem == 0);
 		// Array data iterator
 		User *data = user->data;
 		// Store in new table
@@ -196,7 +214,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Pointer addition arithmetic
+	/// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -208,9 +226,9 @@ template <class User> struct lux_Array
 		if (0 < size) // Non-pointer
 		{
 			// Force offset to be positive
-			lux_checkarg(state, 2, 0 <= offset);
+			lux_argcheck(state, 2, 0 <= offset);
 			// Ensure that we stay in array range
-			lux_checkarg(state, 2, offset < size);
+			lux_argcheck(state, 2, offset < size);
 			// Shrink range
 			size -= offset;
 		}
@@ -219,7 +237,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Pointer subtraction arithmetic
+	/// Pointer subtraction arithmetic
 	static int __sub(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -229,9 +247,9 @@ template <class User> struct lux_Array
 		if (0 < size) // Non-pointer
 		{
 			// Force offset to be positive
-			lux_checkarg(state, 2, 0 <= offset);
+			lux_argcheck(state, 2, 0 <= offset);
 			// Ensure that we stay in range
-			lux_checkarg(state, 2, offset < size);
+			lux_argcheck(state, 2, offset < size);
 			// Shrink range
 			size -= offset;
 			// Put referenced array on the stack
@@ -247,15 +265,15 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Shift elements left by given amount
+	/// Shift elements left by given amount
 	static int __shl(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
-		lux_checkarg(state, 2, 0 < shift);
+		lux_argcheck(state, 2, 0 < shift);
 		size_t size = abs(user->size);
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Proportions used in shift
 		size_t n = shift % size;
 		size_t m = size - n;
@@ -279,15 +297,15 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Shift element right by given amount
+	/// Shift element right by given amount
 	static int __shr(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		ssize_t shift = luaL_checkinteger(state, 2);
 		// We only accept positive values for shifting
-		lux_checkarg(state, 2, 0 < shift);
+		lux_argcheck(state, 2, 0 < shift);
 		size_t size = abs(user->size);
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Proportions used in shift
 		size_t n = shift % size;
 		size_t m = size - n;
@@ -311,13 +329,13 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Reverse elements in the array
+	/// Reverse elements in the array
 	static int __bnot(lua_State *state)
 	{
 		Type *user = Type::check(state);
 		size_t size = abs(user->size);
 		// Array rather than a pointer
-		lux_checkarg(state, 1, 0 < size);
+		lux_argcheck(state, 1, 0 < size);
 		// Half size of the array
 		size_t half = size >> 1;
 		User temp; // Swap elements
@@ -332,7 +350,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Quick sort of the array elements
+	/// Quick sort of the array elements
 	static int __sort(lua_State *state)
 	{
 		// Element comparison operator used for quick sort
@@ -348,7 +366,7 @@ template <class User> struct lux_Array
 		qsort(user->data, abs(user->size), sizeof(User), compare);
 	}
 
-	// Check equality of elements
+	/// Check equality of elements
 	static int __eq(lua_State *state)
 	{
 		Type *one = Type::check(state, 1);
@@ -377,7 +395,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Lexical less than comparison
+	/// Lexical less than comparison
 	static int __lt(lua_State *state)
 	{
 		Type *one = Type::check(state, 1);
@@ -402,7 +420,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Lexical less than or equal
+	/// Lexical less than or equal
 	static int __le(lua_State *state)
 	{
 		Type *one = Type::check(state, 1);
@@ -427,7 +445,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Read as string from a file
+	/// Read as string from a file
 	static int __gets(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -446,7 +464,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Write as string to a file
+	/// Write as string to a file
 	static int __puts(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -464,7 +482,7 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
-	// Read binary elements from a file
+	/// Read binary elements from a file
 	static int __read(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -476,7 +494,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Write binary elements to a file
+	/// Write binary elements to a file
 	static int __write(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
@@ -488,7 +506,7 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Loader compatible with luaL_requiref
+	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
 		Type::name = lua_tostring(state, +1);

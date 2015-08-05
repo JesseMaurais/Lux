@@ -1,6 +1,13 @@
 #ifndef __lxclass__
 #define __lxclass__
 
+/**
+ * Mimics some of the features of arrays but intended to store arrays of C++
+ * objects like class/struct/union rather than POD types. Supports access to
+ * fields within the records (their members) as well as class methods in the
+ * metatable which such types are mapped to by the Lux type system.
+ */
+
 #include "lxalloc.hpp"
 #include "lxstore.hpp"
 #include "lxstack.hpp"
@@ -12,7 +19,7 @@ template <class User> struct lux_Class
 	// Pointer storage implementation
 	typedef lux_Store<User*> Type;
 
-	// Array allocation function
+	/// Array allocation function
 	static int __new(lua_State *state)
 	{
 		size_t size = 1;
@@ -43,7 +50,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
-	// Garbage collection callback
+	/// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -51,14 +58,14 @@ template <class User> struct lux_Class
 		return 0;
 	}
 
-	// String conversion for printing
+	/// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
 		lua_pushfstring(state, "%s: %p", Type::name, Type::to(state));
 		return 1;
 	}
 
-	// Size of array or zero if pointer
+	/// Size of array or zero if pointer
 	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
@@ -66,7 +73,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
-	// Pointer addition arithmetic
+	/// Pointer addition arithmetic
 	static int __add(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -75,7 +82,7 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
-	// Pointer subtraction arithmetic
+	/// Pointer subtraction arithmetic
 	static int __sub(lua_State *state)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -84,8 +91,8 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
-	// Read/Write into given fields of the record
-	template <class Base>
+	/// Read/Write into given fields of the record
+	template <class Base> inline
 	static int member(lua_State *state, Base User::*field)
 	{
 		User *data = lux_to<User*>(state, 1);
@@ -102,7 +109,7 @@ template <class User> struct lux_Class
 		}
 	}
 
-	// Loader compatible with luaL_requiref
+	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
 		Type::name = lua_tostring(state, +1);

@@ -1,14 +1,29 @@
 #ifndef __lxstack__
 #define __lxstack__
 
+/**
+ * For purposes of template programming, we want more indirect access to the
+ * Lua stack operation functions. We need compile-time deduction of the type
+ * of argument and for the C++ compiler to select the correct push/to at the
+ * time it fills out the template. We also want in-place substitution of the
+ * selected functions (that is, inline) since they do nothing more than hint
+ * which Lua stack function to use. All these template push/opt/to functions
+ * should be inlined away at compile time so that they do not imply any more
+ * function call overhead. They should be thought of as rules which map from
+ * C++ types to Lua types rather than usual functions. Any types not already
+ * represented here can be implemented elsewhere and if they are seen by Lux
+ * then they will also be substituted where appropriate. That's to say, this
+ * is an extensible type system. For example: C++ enums are always qualified
+ * as types, so that push/to functions can use the luaL_checkoption to alter
+ * string arguments to enums and back again. 
+ */
+
 #include "lxstore.hpp"
 
-// Print entire stack to stdout
-
+/// Print entire stack to stdout
 int lux_stackdump(lua_State *state);
 
-// Variadic push -- for stacking many data at once
-
+/// Variadic push -- for stacking many data at once
 template <class User, class... Args> inline
 int lux_push(lua_State *state, User data, Args... args)
 {
@@ -17,8 +32,7 @@ int lux_push(lua_State *state, User data, Args... args)
 	return sizeof...(Args) + 1;
 }
 
-// Generic push -- assume that argument is a userdata
- 
+/// Generic push -- assume that argument is user data
 template <class User> inline
 void lux_push(lua_State *state, User data)
 {
@@ -26,16 +40,15 @@ void lux_push(lua_State *state, User data)
 	(void) Type::push(state, data);
 }
 
-// Generic opt -- userdata as an optional argument
-
+/// Generic opt -- user data as an optional argument
 template <class User> inline
 User lux_opt(lua_State *state, int stack, User opt)
 {
 	typedef lux_Store<User> Type;
 	return Type::opt(state, stack, opt);
 }
-// Generic to -- convert userdata at given stack index
 
+/// Generic to -- convert user data at given stack index
 template <class User> inline
 User lux_to(lua_State *state, int stack)
 {

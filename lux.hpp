@@ -4,6 +4,6 @@
 #include "lxthunk.hpp"
 #include "lxarray.hpp"
 #include "lxclass.hpp"
-#include "lxtable.hpp"
 #include "lxbuffs.hpp"
 #include "lxerror.hpp"
+#include "lxtools.hpp"
