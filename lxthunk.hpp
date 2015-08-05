@@ -20,7 +20,7 @@
 template <typename... Args> inline
 int lux_thunk(lua_State *state, void fun(Args...))
 {
-	register size_t arg = sizeof...(Args);
+	register int arg = sizeof...(Args);
 	fun(lux_to<Args>(state, arg--)...);
 	return 0;
 }
@@ -28,7 +28,7 @@ int lux_thunk(lua_State *state, void fun(Args...))
 template <typename Res, typename... Args> inline
 int lux_thunk(lua_State *state, Res fun(Args...))
 {
-	register size_t arg = sizeof...(Args);
+	register int arg = sizeof...(Args);
 	lux_push<Res>(state, fun(lux_to<Args>(state, arg--)...));
 	return 1;
 }
@@ -36,7 +36,7 @@ int lux_thunk(lua_State *state, Res fun(Args...))
 template <typename Obj, typename... Args> inline
 int lux_thunk(lua_State *state, void (Obj::*fun)(Args...))
 {
-	register size_t arg = 1 + sizeof...(Args);
+	register int arg = 1 + sizeof...(Args);
 	auto obj = lux_to<Obj*>(state, 1);
 	(obj->*fun)(lux_to<Args>(state, arg--)...);
 	return 0;
@@ -45,7 +45,7 @@ int lux_thunk(lua_State *state, void (Obj::*fun)(Args...))
 template <typename Res, typename Obj, typename... Args> inline
 int lux_thunk(lua_State *state, Res (Obj::*fun)(Args...))
 {
-	register size_t arg = 1 + sizeof...(Args);
+	register int arg = 1 + sizeof...(Args);
 	auto obj = lux_to<Obj*>(state, 1);
 	lux_push<Res>(state, (obj->*fun)(lux_to<Args>(state, arg--)...));
 	return 1;

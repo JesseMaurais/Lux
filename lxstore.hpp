@@ -50,10 +50,10 @@ template <class User> struct lux_Pack : lux_Type<User>
 template <class User> struct lux_Pack<User*> : lux_Type<User*>
 {
 	User *data;
-	ssize_t size;
+	int size;
 	int ref;
 
-	lux_Pack(User *data=nullptr, ssize_t size=0)
+	lux_Pack(User *data=nullptr, int size=0)
 	{
 		this->data = data;
 		this->size = size;
@@ -64,7 +64,7 @@ template <class User> struct lux_Pack<User*> : lux_Type<User*>
 /// Storage class for const pointers inherits from raw pointers
 template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 {
-	lux_Pack(const User *data=nullptr, ssize_t size=0)
+	lux_Pack(const User *data=nullptr, int size=0)
 	{
 		this->data = const_cast<User*>(data); // Dangerous?
 		this->size = size;
@@ -73,7 +73,7 @@ template <class User> struct lux_Pack<const User*> : lux_Pack<User*>
 };
 
 /// Storage class for fixed size arrays inherits from pointers with caveats
-template <class User, size_t Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
+template <class User, int Size> struct lux_Pack<User[Size]> : lux_Pack<User*>
 {
 	lux_Pack(User *data=nullptr)
 	{
@@ -111,7 +111,7 @@ template <class User> struct lux_Store : lux_Pack<User>
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User data, ssize_t size=0)
+	static Type *push(lua_State *state, User data, int size=0)
 	{
 		auto user = new (state) Type(data);
 		luaL_setmetatable(state, Type::name);
@@ -163,7 +163,7 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User *data, ssize_t size=0)
+	static Type *push(lua_State *state, User *data, int size=0)
 	{
 		if (data)
 		{
@@ -190,7 +190,7 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 	}
 
 	/// Push with reference to owner where 'this' is on the stack
-	Type* push(lua_State *state, User *data, size_t size, int stack)
+	Type* push(lua_State *state, User *data, int size, int stack)
 	{
 		// Put data on the stack (not as owner)
 		auto user = push(state, data, - size);
