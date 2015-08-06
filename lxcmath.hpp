@@ -11,6 +11,8 @@
  * the less-than-or-equal operators are defined for complex numbers, in which
  * their order are determined by their relative distance to the origin in the
  * complex plane. This allows sorting arrays of complex numbers.
+ *
+ * This is highly experimental.
  */
 
 #include "lxstore.hpp"

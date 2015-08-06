@@ -15,7 +15,7 @@ template <class number> struct cblas
 	static luaL_Reg index[];
 };
 
-// Convert between the CBLAS enumerations and strings
+// Convert from strings to CBLAS enumerations
 
 template <>
 enum CBLAS_ORDER lux_to<enum CBLAS_ORDER>(lua_State *state, int stack)
@@ -106,6 +106,8 @@ enum CBLAS_SIDE lux_to<enum CBLAS_SIDE>(lua_State *state, int stack)
 
 template <> luaL_Reg cblas<float>::index[] =
 {
+	// REAL VALUED
+
 	// level 1
 	{"dot", lux_cast(cblas_sdot)},
 	{"nrm2", lux_cast(cblas_snrm2)},
@@ -143,7 +145,48 @@ template <> luaL_Reg cblas<float>::index[] =
 	{"syr2k", lux_cast(cblas_ssyr2k)},
 	{"trmm", lux_cast(cblas_strmm)},
 	{"trsm", lux_cast(cblas_strsm)},
-	// end
+
+	// COMPLEX VALUED
+
+	// level 1
+	{"cdot", lux_cast(cblas_cdotu_sub)},
+	{"cdotc", lux_cast(cblas_cdotc_sub)},
+	{"cnrm2", lux_cast(cblas_scnrm2)},
+	{"casum", lux_cast(cblas_scasum)},
+	{"icamax", lux_cast(cblas_icamax)},
+	{"cswap", lux_cast(cblas_cswap)},
+	{"ccopy", lux_cast(cblas_ccopy)},
+	{"caxpy", lux_cast(cblas_caxpy)},
+	{"cscal", lux_cast(cblas_cscal)},
+	// level 2
+	{"cgemv", lux_cast(cblas_cgemv)},
+	{"cgbmv", lux_cast(cblas_cgbmv)},
+	{"ctrmv", lux_cast(cblas_ctrmv)},
+	{"ctbmv", lux_cast(cblas_ctbmv)},
+	{"ctpmv", lux_cast(cblas_ctpmv)},
+	{"ctrsv", lux_cast(cblas_ctrsv)},
+	{"ctbsv", lux_cast(cblas_ctbsv)},
+	{"ctpsv", lux_cast(cblas_ctpsv)},
+	{"chemv", lux_cast(cblas_chemv)},
+	{"chbmv", lux_cast(cblas_chbmv)}, 
+	{"chpmv", lux_cast(cblas_chpmv)},
+	{"cgeru", lux_cast(cblas_cgeru)},
+	{"cgerc", lux_cast(cblas_cgerc)},
+	{"cher", lux_cast(cblas_cher)},
+	{"chpr", lux_cast(cblas_chpr)},
+	{"cher2", lux_cast(cblas_cher2)},
+	{"chpr2", lux_cast(cblas_chpr2)},
+	// level 3
+	{"cgemm", lux_cast(cblas_cgemm)},
+	{"csymm", lux_cast(cblas_csymm)},
+	{"chemm", lux_cast(cblas_chemm)},
+	{"csyrk", lux_cast(cblas_csyrk)},
+	{"cherk", lux_cast(cblas_cherk)},
+	{"csyr2k", lux_cast(cblas_csyr2k)},
+	{"cher2k", lux_cast(cblas_cher2k)},
+	{"ctrmm", lux_cast(cblas_ctrmm)},
+	{"ctrsm", lux_cast(cblas_ctrsm)},
+
 	{nullptr}
 };
 
@@ -151,6 +194,8 @@ template <> luaL_Reg cblas<float>::index[] =
 
 template <> luaL_Reg cblas<double>::index[] =
 {
+	// REAL VALUED
+
 	// level 1
 	{"dot", lux_cast(cblas_ddot)},
 	{"nrm2", lux_cast(cblas_dnrm2)},
@@ -188,127 +233,48 @@ template <> luaL_Reg cblas<double>::index[] =
 	{"syr2k", lux_cast(cblas_dsyr2k)},
 	{"trmm", lux_cast(cblas_dtrmm)},
 	{"trsm", lux_cast(cblas_dtrsm)},
-	// end
-	{nullptr}
-};
 
-// Specialization for complex single-precision floating-point type
+	// COMPLEX VALUED
 
-complex<float> cblas_cdotu(const int N, const complex<float> *X, const int incX, const complex<float> *Y, const int incY)
-{
-	complex<float> out;
-	cblas_cdotu_sub(N, X, incX, Y, incY, &out);
-	return out;
-}
-
-complex<float> cblas_cdotc(const int N, const complex<float> *X, const int incX, const complex<float> *Y, const int incY)
-{
-	complex<float> out;
-	cblas_cdotc_sub(N, X, incX, Y, incY, &out);
-	return out;
-}
-
-template <> luaL_Reg cblas<complex<float>>::index[] =
-{
 	// level 1
-	{"dot", lux_cast(cblas_cdotu)},
-	{"dotc", lux_cast(cblas_cdotc)},
-	{"nrm2", lux_cast(cblas_scnrm2)},
-	{"asum", lux_cast(cblas_scasum)},
-	{"iamax", lux_cast(cblas_icamax)},
-	{"swap", lux_cast(cblas_cswap)},
-	{"copy", lux_cast(cblas_ccopy)},
-	{"axpy", lux_cast(cblas_caxpy)},
-	{"scal", lux_cast(cblas_cscal)},
+	{"cdot", lux_cast(cblas_zdotu_sub)},
+	{"cdotc", lux_cast(cblas_zdotc_sub)},
+	{"cnrm2", lux_cast(cblas_dznrm2)},
+	{"casum", lux_cast(cblas_dzasum)},
+	{"icamax", lux_cast(cblas_izamax)},
+	{"cswap", lux_cast(cblas_zswap)},
+	{"ccopy", lux_cast(cblas_zcopy)},
+	{"caxpy", lux_cast(cblas_zaxpy)},
+	{"cscal", lux_cast(cblas_zscal)},
 	// level 2
-	{"gemv", lux_cast(cblas_cgemv)},
-	{"gbmv", lux_cast(cblas_cgbmv)},
-	{"trmv", lux_cast(cblas_ctrmv)},
-	{"tbmv", lux_cast(cblas_ctbmv)},
-	{"tpmv", lux_cast(cblas_ctpmv)},
-	{"trsv", lux_cast(cblas_ctrsv)},
-	{"tbsv", lux_cast(cblas_ctbsv)},
-	{"tpsv", lux_cast(cblas_ctpsv)},
-	{"hemv", lux_cast(cblas_chemv)},
-	{"hbmv", lux_cast(cblas_chbmv)}, 
-	{"hpmv", lux_cast(cblas_chpmv)},
-	{"geru", lux_cast(cblas_cgeru)},
-	{"gerc", lux_cast(cblas_cgerc)},
-	{"her", lux_cast(cblas_cher)},
-	{"hpr", lux_cast(cblas_chpr)},
-	{"her2", lux_cast(cblas_cher2)},
-	{"hpr2", lux_cast(cblas_chpr2)},
+	{"cgemv", lux_cast(cblas_zgemv)},
+	{"cgbmv", lux_cast(cblas_zgbmv)},
+	{"ctrmv", lux_cast(cblas_ztrmv)},
+	{"ctbmv", lux_cast(cblas_ztbmv)},
+	{"ctpmv", lux_cast(cblas_ztpmv)},
+	{"ctrsv", lux_cast(cblas_ztrsv)},
+	{"ctbsv", lux_cast(cblas_ztbsv)},
+	{"ctpsv", lux_cast(cblas_ztpsv)},
+	{"chemv", lux_cast(cblas_zhemv)},
+	{"chbmv", lux_cast(cblas_zhbmv)}, 
+	{"chpmv", lux_cast(cblas_zhpmv)},
+	{"cgeru", lux_cast(cblas_zgeru)},
+	{"cgerc", lux_cast(cblas_zgerc)},
+	{"cher", lux_cast(cblas_zher)},
+	{"chpr", lux_cast(cblas_zhpr)},
+	{"cher2", lux_cast(cblas_zher2)},
+	{"chpr2", lux_cast(cblas_zhpr2)},
 	// level 3
-	{"gemm", lux_cast(cblas_cgemm)},
-	{"symm", lux_cast(cblas_csymm)},
-	{"hemm", lux_cast(cblas_chemm)},
-	{"syrk", lux_cast(cblas_csyrk)},
-	{"herk", lux_cast(cblas_cherk)},
-	{"syr2k", lux_cast(cblas_csyr2k)},
-	{"her2k", lux_cast(cblas_cher2k)},
-	{"trmm", lux_cast(cblas_ctrmm)},
-	{"trsm", lux_cast(cblas_ctrsm)},
-	// end
-	{nullptr}
-};
+	{"cgemm", lux_cast(cblas_zgemm)},
+	{"csymm", lux_cast(cblas_zsymm)},
+	{"chemm", lux_cast(cblas_zhemm)},
+	{"csyrk", lux_cast(cblas_zsyrk)},
+	{"cherk", lux_cast(cblas_zherk)},
+	{"csyr2k", lux_cast(cblas_zsyr2k)},
+	{"cher2k", lux_cast(cblas_zher2k)},
+	{"ctrmm", lux_cast(cblas_ztrmm)},
+	{"ctrsm", lux_cast(cblas_ztrsm)},
 
-// Specialization for complex double-precision floating-point type
-
-complex<double> cblas_zdotu(const int N, const complex<double> *X, const int incX, const complex<double> *Y, const int incY)
-{
-	complex<double> out;
-	cblas_zdotu_sub(N, X, incX, Y, incY, &out);
-	return out;
-}
-
-complex<double> cblas_zdotc(const int N, const complex<double> *X, const int incX, const complex<double> *Y, const int incY)
-{
-	complex<double> out;
-	cblas_zdotc_sub(N, X, incX, Y, incY, &out);
-	return out;
-}
-
-template <> luaL_Reg cblas<complex<double>>::index[] =
-{
-	// level 1
-	{"dot", lux_cast(cblas_zdotu)},
-	{"dotc", lux_cast(cblas_zdotc)},
-	{"nrm2", lux_cast(cblas_dznrm2)},
-	{"asum", lux_cast(cblas_dzasum)},
-	{"iamax", lux_cast(cblas_izamax)},
-	{"swap", lux_cast(cblas_zswap)},
-	{"copy", lux_cast(cblas_zcopy)},
-	{"axpy", lux_cast(cblas_zaxpy)},
-	{"scal", lux_cast(cblas_zscal)},
-	// level 2
-	{"gemv", lux_cast(cblas_zgemv)},
-	{"gbmv", lux_cast(cblas_zgbmv)},
-	{"trmv", lux_cast(cblas_ztrmv)},
-	{"tbmv", lux_cast(cblas_ztbmv)},
-	{"tpmv", lux_cast(cblas_ztpmv)},
-	{"trsv", lux_cast(cblas_ztrsv)},
-	{"tbsv", lux_cast(cblas_ztbsv)},
-	{"tpsv", lux_cast(cblas_ztpsv)},
-	{"hemv", lux_cast(cblas_zhemv)},
-	{"hbmv", lux_cast(cblas_zhbmv)}, 
-	{"hpmv", lux_cast(cblas_zhpmv)},
-	{"geru", lux_cast(cblas_zgeru)},
-	{"gerc", lux_cast(cblas_zgerc)},
-	{"her", lux_cast(cblas_zher)},
-	{"hpr", lux_cast(cblas_zhpr)},
-	{"her2", lux_cast(cblas_zher2)},
-	{"hpr2", lux_cast(cblas_zhpr2)},
-	// level 3
-	{"gemm", lux_cast(cblas_zgemm)},
-	{"symm", lux_cast(cblas_zsymm)},
-	{"hemm", lux_cast(cblas_zhemm)},
-	{"syrk", lux_cast(cblas_zsyrk)},
-	{"herk", lux_cast(cblas_zherk)},
-	{"syr2k", lux_cast(cblas_zsyr2k)},
-	{"her2k", lux_cast(cblas_zher2k)},
-	{"trmm", lux_cast(cblas_ztrmm)},
-	{"trsm", lux_cast(cblas_ztrsm)},
-	// end
 	{nullptr}
 };
 
@@ -321,8 +287,6 @@ extern "C" int luaopen_cblas(lua_State *state)
 	{
 	{"float", cblas<float>::open},
 	{"double", cblas<double>::open},
-	{"complex", cblas<complex<float>>::open},
-	{"complexd", cblas<complex<double>>::open},
 	{nullptr}
 	};
 	for (auto r=regs; r->name; ++r)
