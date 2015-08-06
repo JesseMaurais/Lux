@@ -42,7 +42,7 @@ template <class User> struct lux_Array
 		ssize_t length;
 		size_t size;
 		User *data;
-		// Check constructor arguments
+		// Check constructor argument
 		switch (lua_type(state, 1))
 		{
 		  default:
@@ -140,9 +140,10 @@ template <class User> struct lux_Array
 		// Arrays are indexed from 1 rather than 0
 		user->data[--index] = lux_to<User>(state, 3);
 		}
-		else
+		else // out of bounds
 		{
-		luaL_error(state, "attempt to index a nil value");
+		// Report error to the interpreter so it can do a stack trace
+		luaL_error(state, "assignment to %d is out of bounds", index);
 		}
 		return 0;
 	}
@@ -161,7 +162,7 @@ template <class User> struct lux_Array
 			if (item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
-			buffer.addvalue(); // Pops string
+			buffer.addvalue(); // make string
 		}
 		buffer.push();
 		return 1;
@@ -394,7 +395,7 @@ template <class User> struct lux_Array
 	{
 		const User &a = *(const User *) p1;
 		const User &b = *(const User *) p2;
-		return a < b ? -1 : a > b ? +1 : 0;
+		return a < b ? -1 : b < a ? +1 : 0;
 	};
 
 	/// Quick sort of the array elements
@@ -447,7 +448,7 @@ template <class User> struct lux_Array
 		for (int item = 0; item < size; ++item)
 		{
 			// Return on first negative result
-			if (one->data[item] >= two->data[item])
+			if (two->data[item] <= one->data[item])
 			{
 				lux_push(state, false);
 				return 1;
@@ -472,7 +473,7 @@ template <class User> struct lux_Array
 		for (int item = 0; item < size; ++item)
 		{
 			// Return on first negative result
-			if (one->data[item] > two->data[item])
+			if (two->data[item] < one->data[item])
 			{
 				lux_push(state, false);
 				return 1;

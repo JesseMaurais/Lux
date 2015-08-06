@@ -1,4 +1,5 @@
 #include "lux.hpp"
+#include "lxcmath.hpp"
 
 // Straight-forward implementation of POD arrays
 
@@ -13,6 +14,7 @@ extern "C" int luaopen_array(lua_State *state)
 	{"long", lux_Array<long>::open},
 	{"float", lux_Array<float>::open},
 	{"double", lux_Array<double>::open},
+	{"complex", lux_Complex<float>::open},
 	{nullptr}
 	};
 	for (auto reg=regs; reg->name; ++reg)
