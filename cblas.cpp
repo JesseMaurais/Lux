@@ -9,12 +9,14 @@ enum CBLAS_ORDER lux_to<enum CBLAS_ORDER>(lua_State *state, int stack)
 	auto arg = lua_tostring(state, stack);
 	switch (*arg)
 	{
-	case 'r':
-	case 'R':
-		return CblasRowMajor;
-	case 'c':
 	case 'C':
+	case 'c':
+	case '|':
 		return CblasColMajor;
+	case 'R':
+	case 'r':
+	case '_':	
+		return CblasRowMajor;
 	}
 	luaL_argerror(state, stack, "R or C");
 }
@@ -25,17 +27,23 @@ enum CBLAS_TRANSPOSE lux_to<enum CBLAS_TRANSPOSE>(lua_State *state, int stack)
 	auto arg = lua_tostring(state, stack);
 	switch (*arg)
 	{
-	case 't':
 	case 'T':
+	case 't':
+	case '/':
 		return CblasTrans;
+	case 'N':
+	case 'n':
 	case ' ':
 		return CblasNoTrans;
-	case 'h':
+	case 'C':
+	case 'c':
 	case 'H':
+	case 'h':
 	case '*':
+	case '+':
 		return CblasConjTrans;
 	}
-	luaL_argerror(state, stack, "t, T, h, H or ' '");
+	luaL_argerror(state, stack, "t, T, n, N, c, C");
 }
 
 template <>
@@ -44,14 +52,16 @@ enum CBLAS_UPLO lux_to<enum CBLAS_UPLO>(lua_State *state, int stack)
 	auto arg = lua_tostring(state, stack);
 	switch (*arg)
 	{
-	case 'u':
 	case 'U':
+	case 'u':
+	case '^':
 		return CblasUpper;
-	case 'l':
 	case 'L':
+	case 'l':
+	case '_':
 		return CblasLower;
 	}
-	luaL_argerror(state, stack, "u, U, l, or L");
+	luaL_argerror(state, stack, "U, u, L, l");
 }
 
 template <>
@@ -60,14 +70,16 @@ enum CBLAS_DIAG lux_to<enum CBLAS_DIAG>(lua_State *state, int stack)
 	auto arg = lua_tostring(state, stack);
 	switch (*arg)
 	{
-	case 'u':
 	case 'U':
+	case 'u':
+	case '1':
 		return CblasUnit;
-	case 'n':
 	case 'N':
+	case 'n':
+	case ' ':
 		return CblasNonUnit;
 	}
-	luaL_argerror(state, stack, "u, U, n, or N");
+	luaL_argerror(state, stack, "U, u, N, n");
 }
 
 template <>
@@ -76,16 +88,16 @@ enum CBLAS_SIDE lux_to<enum CBLAS_SIDE>(lua_State *state, int stack)
 	auto arg = lua_tostring(state, stack);
 	switch (*arg)
 	{
-	case 'l':
 	case 'L':
+	case 'l':
 	case '<':
 		return CblasLeft;
-	case 'r':
 	case 'R':
+	case 'r':
 	case '>':
 		return CblasRight;
 	}
-	luaL_argerror(state, stack, "l, L, <, r, R, or >");
+	luaL_argerror(state, stack, "L, l, R, r");
 }
 
 // Lua C module entry point
