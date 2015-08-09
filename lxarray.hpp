@@ -390,21 +390,6 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Element comparison usable by qsort and friends
-	static int compare(const void *p1, const void *p2)
-	{
-		const User &a = *(const User *) p1;
-		const User &b = *(const User *) p2;
-		return a < b ? -1 : b < a ? +1 : 0;
-	};
-
-	/// Quick sort of the array elements
-	static int __sort(lua_State *state)
-	{
-		Type *user = Type::check(state);
-		qsort(user->data, abs(user->size), sizeof(User), compare);
-	}
-
 	/// Check equality of elements
 	static int __eq(lua_State *state)
 	{
@@ -484,8 +469,87 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	// Element comparison usable by qsort and friends
+	static int compare(const void *p1, const void *p2)
+	{
+		const User &a = *(const User *) p1;
+		const User &b = *(const User *) p2;
+		return a < b ? -1 : b < a ? +1 : 0;
+	};
+
+	/// Quick sort of the array elements
+	static int sort(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointer sorting forbidden
+		size_t size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Quick-sort algorithm in standard C library
+		qsort(user->data, size, sizeof(User), compare);
+	}
+
+	/// Search a sorted array for first match
+	static int search(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointer indexing forbidden
+		size_t size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Find first index of this element
+		User key = lux_to<User>(state, 2);
+		// Standard C library 'bsearch'
+		union { void *find; User *data; };
+		find = bsearch(&key, user->data, size, sizeof(User), compare);
+		// Index (from 1) of first element in array if found, else nil
+		if (find) lua_pushinteger(state, user->data - data + 1);
+		else lua_pushnil(state);
+		return 1;
+	}
+
+	/// Write binary elements to a file
+	static int write(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_opt(state, 2, stdout);
+		// Using fwrite on given file
+		int size = abs(user->size);
+		size = fwrite(user->data, size, sizeof(User), file);
+		lux_push(state, size);
+		return 1;
+	}
+
+	/// Read binary elements from a file
+	static int read(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_opt(state, 2, stdin);
+		// Using fread on given file
+		int size = abs(user->size);
+		size = fread(user->data, size, sizeof(User), file);
+		lux_push(state, size);
+		return 1;
+	}
+
+	/// Write as string to a file
+	static int puts(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		FILE *file = lux_opt(state, 2, stdout);
+		// Store UTF-8 characters
+		int size = abs(user->size);
+		char data[size * MB_CUR_MAX];
+		// Conversion
+		lux_Chars shift;
+		size = shift.from(data, user->data, size);
+		if (size < 0) return lux_perror(state);
+		// Using fputs on given file
+		data[size] = '\0';
+		fputs(data, file);
+		return 0;
+	}
+
 	/// Read as string from a file
-	static int __gets(lua_State *state)
+	static int gets(lua_State *state)
 	{
 		Type *user = Type::check(state, 1);
 		FILE *file = lux_opt(state, 2, stdin);
@@ -503,80 +567,44 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	/// Write as string to a file
-	static int __puts(lua_State *state)
-	{
-		Type *user = Type::check(state, 1);
-		FILE *file = lux_opt(state, 2, stdout);
-		// Store UTF-8 characters
-		int size = abs(user->size);
-		char data[size * MB_CUR_MAX];
-		// Conversion
-		lux_Chars shift;
-		size = shift.from(data, user->data, size);
-		if (size < 0) return lux_perror(state);
-		// Using fputs on given file
-		data[size] = '\0';
-		fputs(data, file);
-		return 0;
-	}
-
-	/// Read binary elements from a file
-	static int __read(lua_State *state)
-	{
-		Type *user = Type::check(state, 1);
-		FILE *file = lux_opt(state, 2, stdin);
-		// Using fread on given file
-		int size = abs(user->size);
-		size = fread(user->data, size, sizeof(User), file);
-		lux_push(state, size);
-		return 1;
-	}
-
-	/// Write binary elements to a file
-	static int __write(lua_State *state)
-	{
-		Type *user = Type::check(state, 1);
-		FILE *file = lux_opt(state, 2, stdout);
-		// Using fwrite on given file
-		int size = abs(user->size);
-		size = fwrite(user->data, size, sizeof(User), file);
-		lux_push(state, size);
-		return 1;
-	}
-
 	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
-		Type::name = lua_tostring(state, +1);
-		luaL_newmetatable(state, Type::name);
-		luaL_Reg regs [] =
+		// Pull the module name off stack
+		Type::name = lua_tostring(state, 1);
+		// Go through the registry process once
+		if (luaL_newmetatable(state, Type::name))
 		{
-		{"new", __new},
-		{"gets", __gets},
-		{"puts", __puts},
-		{"read", __read},
-		{"write", __write},
-		{"sort", __sort},
-		{"__tostring", __tostring},
-		{"__concat", __concat},
-		{"__newindex", __newindex},
-		{"__index", __index},
-		{"__len", __len},
-		{"__mul", __mul},
-		{"__div", __div},
-		{"__add", __add},
-		{"__sub", __sub},
-		{"__shl", __shl},
-		{"__shr", __shr},
-		{"__unm", __unm},
-		{"__eq", __eq},
-		{"__lt", __lt},
-		{"__le", __le},
-		{"__gc", __gc},
-		{nullptr}
-		};
-		luaL_setfuncs(state, regs, 0);
+			luaL_Reg regs [] =
+			{
+			{"sort", sort},
+			{"search", search},
+			{"write", write},
+			{"read", read},
+			{"puts", puts},
+			{"gets", gets},
+			{"new", __new},
+			{"__tostring", __tostring},
+			{"__concat", __concat},
+			{"__newindex", __newindex},
+			{"__index", __index},
+			{"__len", __len},
+			{"__mul", __mul},
+			{"__div", __div},
+			{"__add", __add},
+			{"__sub", __sub},
+			{"__shl", __shl},
+			{"__shr", __shr},
+			{"__unm", __unm},
+			{"__eq", __eq},
+			{"__lt", __lt},
+			{"__le", __le},
+			{"__gc", __gc},
+			{nullptr}
+			};
+			// Register these functions
+			luaL_setfuncs(state, regs, 0);
+		}
 		return 1;
 	}
 };

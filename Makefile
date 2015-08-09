@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-std=c++11
-SRC=lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxerror.hpp lxcmath.hpp lxtools.hpp
-OBJ=liblux.so array.so cblas.so cstdlib.so cstdio.so cstring.so csignal.so ctime.so clocale.so cfenv.so unistd.so termios.so random.so thread.so mutex.so test.so
+SRC=lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxerror.hpp lxcmath.hpp lxqmath.hpp lxtools.hpp
+OBJ=liblux.so array.so lapacke.so cblas.so cstdlib.so cstdio.so cstring.so csignal.so ctime.so clocale.so cfenv.so unistd.so termios.so random.so thread.so test.so
 
 all: $(OBJ)
 
@@ -24,14 +24,14 @@ liblux.so: lux.cpp $(SRC)
 thread.so: thread.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -pthread
 
-mutex.so: mutex.cpp $(SRC)
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -pthread
+cfenv.so: cfenv.cpp
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lm
 
 cblas.so: cblas.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lblas
 
-cfenv.so: cfenv.cpp
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lm
+lapacke.so: lapacke.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux -lblas -llapacke
 
 %.so: %.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llux

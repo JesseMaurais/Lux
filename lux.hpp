@@ -6,4 +6,6 @@
 #include "lxclass.hpp"
 #include "lxbuffs.hpp"
 #include "lxerror.hpp"
+#include "lxcmath.hpp"
+#include "lxqmath.hpp"
 #include "lxtools.hpp"

@@ -1,5 +1,8 @@
 #include "lux.hpp"
 
+using complex = std::complex<double>;
+using rational = lux_Rational<long>;
+
 // Straight-forward implementation of POD arrays
 
 extern "C" int luaopen_array(lua_State *state)
@@ -13,6 +16,8 @@ extern "C" int luaopen_array(lua_State *state)
 	{"long", lux_Array<long>::open},
 	{"float", lux_Array<float>::open},
 	{"double", lux_Array<double>::open},
+	{"complex", lux_Array<complex>::open},
+	{"rational", lux_Array<rational>::open},
 	{nullptr}
 	};
 	for (auto reg=regs; reg->name; ++reg)
