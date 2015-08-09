@@ -37,7 +37,7 @@ template <class Real> struct lux_Complex
 		return Type::check(state, stack)->data;
 	}
 
-	/// Returns a stack value coerced to a (real) number
+	/// Returns a stack value converted to a (real) number
 	static inline Real val(lua_State *state, int stack=2)
 	{
 		return lua_tonumber(state, stack);
@@ -149,6 +149,52 @@ template <class Real> struct lux_Complex
 		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
+		lua_pop(state, 1);
+		// Open the complex array type
+		lux_Array<Complex>::open(state);
+		// The imaginary sqrt(-1)
+		lua_pushliteral(state, "i");
+		lux_push(state, Complex(0, 1));
+		lua_settable(state, -3);
+		return 1;
+ 	}
+
+	/// Custom element compare to overload arrays
+	static int compare(const void *p, const void *q)
+	{
+		// We will call norm only 2 times instead of 4 times
+		auto n = std::norm(*(const std::complex<double> *) p);
+		auto m = std::norm(*(const std::complex<double> *) q);
+		// Compare by distance to origin in complex plane
+		return n < m ? -1 : m < n ? +1 : 0;
+	}
+
+	/// Custom string conversion to overload arrays
+	static int tostring(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		int size = abs(user->size);
+		// Build up a string
+		lux_Buffer buffer(state);
+		// Iterate over each item in the array
+		for (int item = 0; item < size; ++item)
+		{
+			// Add separator only after first
+			if (item) buffer.addstring(", ");
+			// Get real and imaginary parts
+			auto data = user->data + item;
+			auto real = data->real();
+			auto imag = data->imag();
+			// Convert imaginary part
+			buffer.addchar('i');
+			lux_push(state, imag);
+			buffer.addvalue();
+			// Convert the real part
+			buffer.addstring(" + ");
+			lux_push(state, real);
+			buffer.addvalue();
+		}
+		buffer.push();
 		return 1;
 	}
 };
@@ -167,7 +213,58 @@ bool operator <= (const std::complex<Real> &c, const std::complex<Real> &d)
 	return std::norm(c) <= std::norm(d);
 }
 
+// Overload arrays to use optimized complex number comparison
+
+template <>
+int lux_Array<std::complex<float>>::compare(const void *p, const void *q)
+{
+	return lux_Complex<float>::compare(p, q);
+}
+
+template <>
+int lux_Array<std::complex<double>>::compare(const void *p, const void *q)
+{
+	return lux_Complex<double>::compare(p, q);
+}
+
+template <>
+int lux_Array<std::complex<long double>>::compare(const void *p, const void *q)
+{
+	return lux_Complex<long double>::compare(p, q);
+}
+
+// Overload arrays to use proper string conversion for printing
+
+template <>
+int lux_Array<std::complex<float>>::__tostring(lua_State *state)
+{
+	return lux_Complex<float>::tostring(state);
+}
+
+template <>
+int lux_Array<std::complex<double>>::__tostring(lua_State *state)
+{
+	return lux_Complex<double>::tostring(state);
+}
+
+template <>
+int lux_Array<std::complex<long double>>::__tostring(lua_State *state)
+{
+	return lux_Complex<long double>::tostring(state);
+}
+
 // Overloaded for implicit conversion from related numeric type
+
+template <> inline
+std::complex<float> lux_to(lua_State *state, int stack)
+{
+	typedef lux_Store<std::complex<float>> Type;
+
+	if (lua_isnumber(state, stack))
+	return lua_tonumber(state, stack);
+	else
+	return Type::to(state, stack);
+}
 
 template <> inline
 std::complex<double> lux_to(lua_State *state, int stack)
@@ -180,147 +277,15 @@ std::complex<double> lux_to(lua_State *state, int stack)
 	return Type::to(state, stack);
 }
 
-// Specialize several array methods for copmlex type //////////////////////////
-
-template <>
-// The same except does not accept construction from strings
-int lux_Array<std::complex<double>>::__new(lua_State *state)
+template <> inline
+std::complex<long double> lux_to(lua_State *state, int stack)
 {
-	typedef std::complex<double> User;
-	typedef lux_Store<User*> Type;
-	// Array data
-	size_t size;
-	User *data;
-	// Check constructor argument
-	switch (lua_type(state, 1))
-	{
-	  default:
-		// We only construct from these argument types
-		return luaL_argerror(state, 1, "number, table");
-	  case LUA_TNUMBER:
-		size = lua_tointeger(state, 1);
-		lux_argcheck(state, 1, 0 < size);
-		data = new User [size];
-		break;
-	  case LUA_TTABLE:
-		// Copy table contents
-		size = luaL_len(state, 1);
-		data = new User [size];
-		lua_pushnil(state);
-		for (int it = 0; lua_next(state, 1); ++it)
-		{
-		 if (lua_isnumber(state, 3))
-		 data[it] = lua_tonumber(state, 3);
-		 else
-		 data[it] = lux_to<User>(state, 3);
-		 lua_pop(state, 1);
-		}
-		break;
-	};
-	// Put the array on the stack
-	Type::push(state, data, size);
-	return 1;
-}
+	typedef lux_Store<std::complex<long double>> Type;
 
-template <>
-// String conversion for printing both components properly
-int lux_Array<std::complex<double>>::__tostring(lua_State *state)
-{
-	Type *user = Type::check(state);
-	int size = abs(user->size);
-	// Build up a string
-	lux_Buffer buffer(state);
-	// Iterate over each item in the array
-	for (int item = 0; item < size; ++item)
-	{
-		// Add separator only after first
-		if (item) buffer.addstring(", ");
-		// Get real and imaginary parts
-		auto data = user->data + item;
-		auto real = data->real();
-		auto imag = data->imag();
-		// Convert imaginary part
-		buffer.addchar('i');
-		lux_push(state, imag);
-		buffer.addvalue();
-		// Convert the real part
-		buffer.addstring(" + ");
-		lux_push(state, real);
-		buffer.addvalue();
-	}
-	buffer.push();
-	return 1;
-}
-
-template <>
-// More efficient way to compare two complex numbers for qsort and friends
-int lux_Array<std::complex<double>>::compare(const void *p, const void *q)
-{
-	// We will call norm only 2 times instead of 4 times
-	auto n = std::norm(*(const std::complex<double> *) p);
-	auto m = std::norm(*(const std::complex<double> *) q);
-	// Compare by distance to origin in complex plane
-	return n < m ? -1 : m < n ? +1 : 0;
-}
-
-template <>
-// Conversion of complex numbers to string is prohibited
-int lux_Array<std::complex<double>>::puts(lua_State *state)
-{
-	return luaL_error(state, "Put string not supported for complex");
-}
-
-template <>
-// Conversion of complex numbers from string is prohibited
-int lux_Array<std::complex<double>>::gets(lua_State *state)
-{
-	return luaL_error(state, "Get string not supported for complex");
-}
-
-template <>
-// When loading, load the numeric type and the number i too
-int lux_Array<std::complex<double>>::open(lua_State *state)
-{
-	// Open the numeric type first
-	lux_Complex<double>::open(state);
-	// Next open the complex array type
-	Type::name = lua_tostring(state, +1);
-	if (luaL_newmetatable(state, Type::name))
-	{
-		luaL_Reg regs [] =
-		{
-		{"sort", sort},
-		{"search", search},
-		{"write", write},
-		{"read", read},
-		{"copy", copy},
-		{"swap", swap},
-		{"new", __new},
-		{"__gc", __gc},
-		{"__tostring", __tostring},
-		{"__concat", __concat},
-		{"__newindex", __newindex},
-		{"__index", __index},
-		{"__len", __len},
-		{"__mul", __mul},
-		{"__div", __div},
-		{"__add", __add},
-		{"__sub", __sub},
-		{"__shl", __shl},
-		{"__shr", __shr},
-		{"__unm", __unm},
-		{"__eq", __eq},
-		{"__lt", __lt},
-		{"__le", __le},
-		{nullptr}
-		};
-		luaL_setfuncs(state, regs, 0);
-		// The imaginary sqrt(-1)
-		lua_pushliteral(state, "i");
-		lux_push(state, std::complex<double>(0, 1));
-		lua_settable(state, -3);
-	}
-	return 1;
+	if (lua_isnumber(state, stack))
+	return lua_tonumber(state, stack);
+	else
+	return Type::to(state, stack);
 }
 
 #endif // file

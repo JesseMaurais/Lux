@@ -590,15 +590,27 @@ template <class User> struct lux_Array
 	/// Copy array contents to another
 	static int copy(lua_State *state)
 	{
-		Type *user = Type::check(state);
-		// Pointer copy forbidden
-		int size = abs(user->size);
-		User *data = new User [size];
-		// Copy conents of the origin to new array
-		memcpy(data, user->data, size*sizeof(User));
-		// Put new array on the stack
-		Type::push(state, data, size);
-		return 1;
+		Type *user = Type::check(state, 1);
+		Type *to = Type::test(state, 2);
+		// Second argument?
+		if (!to)
+		{
+			int size = abs(user->size);
+			User *data = new User [size];
+			Type::push(state, data, size);
+			// Copy contents of original to new array
+			memcpy(data, user->data, size*sizeof(User));
+			return 1;
+		}
+		else
+		{
+			int m = abs(to->size);
+			int n = abs(user->size);
+			int size = n < m ? n : m;
+			// Copy contents over with possible overlap
+			memmove(to->data, user->data, size*sizeof(User));
+			return 0;
+		}
 	}
 
 	/// Swap contents of two arrays
