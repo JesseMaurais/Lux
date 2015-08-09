@@ -15,9 +15,17 @@ template <> luaL_Reg lux_Class<tm>::index[] =
 	{nullptr}
 };
 
+template <> luaL_Reg lux_Class<timespec>::index[] =
+{
+	{"tv_sec", lux_member(timespec, tv_sec)},
+	{"tv_nsec", lux_member(timespec, tv_nsec)},
+	{nullptr}
+};
+
 extern "C" int luaopen_ctime(lua_State *state)
 {
 	luaL_requiref(state, "tm", lux_Class<tm>::open, false);
+//	luaL_requiref(state, "spec", lux_Class<timespec>::open, false);
 	luaL_Reg regs[] =
 	{
 	{"clock", lux_cast(clock)},

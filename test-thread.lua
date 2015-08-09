@@ -1,14 +1,13 @@
 print "Test the use of C++11 threads in Lua"
 
-thread = require'thread'
-mutex = require'mutex'
+require'thread'
 
-term = mutex.new()
+door = mutex.new()
 
 function say(message)
-	term:lock()
+	door:lock()
 	print(message)
-	term:unlock()
+	door:unlock()
 end
 
 hello = thread.new(say, 'Hello')

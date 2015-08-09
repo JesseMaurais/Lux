@@ -65,6 +65,23 @@ template <class User> struct lux_Class
 		return 1;
 	}
 
+	/// Get temporary (no-ref) pointer
+	static int __call(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointer index prohibited
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Check that object index is in range
+		int index = luaL_checkinteger(state, 2);
+		lux_argcheck(state, 2, 0 < index);
+		lux_argcheck(state, 2, index <= size);
+		// Put pointer on the stack
+		-- index; // C indexes from 0, not 1
+		Type::push(state, user->data + index);
+		return 1;
+	}
+
 	/// String conversion for printing
 	static int __tostring(lua_State *state)
 	{
@@ -292,29 +309,34 @@ template <class User> struct lux_Class
 	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
-		Type::name = lua_tostring(state, +1);
-		luaL_newmetatable(state, Type::name);
-		luaL_Reg regs[] =
+		// Pull module name off the stack
+		Type::name = lua_tostring(state, 1);
+		// Go through registry process only once
+		if (luaL_newmetatable(state, Type::name))
 		{
-		{"new", __new},
-		{"__gc", __gc},
-		{"__len", __len},
-		{"__tostring", __tostring},
-		{"__mul", __mul},
-		{"__div", __div},
-		{"__add", __add},
-		{"__sub", __sub},
-		{"__shl", __shl},
-		{"__shr", __shr},
-		{"__unm", __unm},
-		{nullptr}
-		};
-		luaL_setfuncs(state, regs, 0);
-		if (index->name)
-		{
-		lua_pushliteral(state, "__index");
-		luaL_newlib(state, index);
-		lua_settable(state, -3);
+			luaL_Reg regs[] =
+			{
+			{"new", __new},
+			{"__gc", __gc},
+			{"__len", __len},
+			{"__call", __call},
+			{"__tostring", __tostring},
+			{"__mul", __mul},
+			{"__div", __div},
+			{"__add", __add},
+			{"__sub", __sub},
+			{"__shl", __shl},
+			{"__shr", __shr},
+			{"__unm", __unm},
+			{nullptr}
+			};
+			luaL_setfuncs(state, regs, 0);
+			if (index->name)
+			{
+			lua_pushliteral(state, "__index");
+			luaL_newlib(state, index);
+			lua_settable(state, -3);
+			}
 		}
 		return 1;
 	}

@@ -230,10 +230,10 @@ template <class User> struct lux_Array
 		int size = abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Force divisor to be positive
-		int items = luaL_checkinteger(state, 2);
-		lux_argcheck(state, 2, 0 < items);
+		int parts = luaL_checkinteger(state, 2);
+		lux_argcheck(state, 2, 0 < parts);
 		// Force complete division
-		auto fract = div(size, items);
+		auto fract = div(size, parts);
 		lux_argcheck(state, 2, fract.rem == 0);
 		// Put data in new table
 		User *data = user->data;
@@ -244,12 +244,32 @@ template <class User> struct lux_Array
 			// Indexed from 1 like array
 			lua_pushinteger(state, item);
 			// Push sub-array onto the stack
-			user->push(state, data, items, 1);
+			user->push(state, data, parts, 1);
 			// Put it into the table
 			lua_settable(state, -3);
 			// Advance to next
-			data += items;
+			data += parts;
 		}
+		return 1;
+	}
+
+	/// Partition into overlapping areas
+	static int __mod(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointers not supported
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Partition must be within range
+		int parts = luaL_checkinteger(state, 2);
+		lux_argcheck(state, 2, 0 < parts);
+		lux_argcheck(state, 2, parts < size);
+		// Setup iterator and size
+		auto data = user->data;
+		size -= parts;
+		// Store in a table
+		lua_newtable(state);
+		while (--parts) user->push(state, data++, size, 1);
 		return 1;
 	}
 
@@ -567,10 +587,37 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	/// Copy array contents to another
+	static int copy(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		// Pointer copy forbidden
+		int size = abs(user->size);
+		User *data = new User [size];
+		// Copy conents of the origin to new array
+		memcpy(data, user->data, size*sizeof(User));
+		// Put new array on the stack
+		Type::push(state, data, size);
+		return 1;
+	}
+
+	/// Swap contents of two arrays
+	static int swap(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		Type *with = Type::check(state, 2);
+		Type temp[1]; // temporary store
+		// Swap content rather than data
+		memcpy(temp, user, sizeof(Type));
+		memcpy(user, with, sizeof(Type));
+		memcpy(with, temp, sizeof(Type));
+		return 0;
+	}
+
 	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
-		// Pull the module name off stack
+		// Pull module name off the stack
 		Type::name = lua_tostring(state, 1);
 		// Go through the registry process once
 		if (luaL_newmetatable(state, Type::name))
@@ -583,7 +630,10 @@ template <class User> struct lux_Array
 			{"read", read},
 			{"puts", puts},
 			{"gets", gets},
+			{"copy", copy},
+			{"swap", swap},
 			{"new", __new},
+			{"__gc", __gc},
 			{"__tostring", __tostring},
 			{"__concat", __concat},
 			{"__newindex", __newindex},
@@ -599,7 +649,6 @@ template <class User> struct lux_Array
 			{"__eq", __eq},
 			{"__lt", __lt},
 			{"__le", __le},
-			{"__gc", __gc},
 			{nullptr}
 			};
 			// Register these functions

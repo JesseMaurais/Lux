@@ -119,14 +119,14 @@ template <class User> struct lux_Store : lux_Pack<User>
 	}
 
 	/// Return data if types match or the given default
-	static User opt(lua_State *state, int stack, User &opt)
+	static User &opt(lua_State *state, int stack, User &opt)
 	{
 		auto user = test(state, stack);
 		return user ? user->data : opt;
 	}
 
 	/// Return data if types match or not at all
-	static User to(lua_State *state, int stack=1)
+	static User &to(lua_State *state, int stack=1)
 	{
 		return check(state, stack)->data;
 	}

@@ -5,10 +5,6 @@
 
 extern "C" int luaopen_cstdio(lua_State *state)
 {
-	typedef lux_Store<FILE*> Type;
-	luaL_newmetatable(state, Type::name = "FILE");
-	lua_pop(state, 1);
-
 	luaL_Reg regs[] =
 	{
 	REG(clearerr)
