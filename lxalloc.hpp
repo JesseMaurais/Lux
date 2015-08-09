@@ -24,8 +24,15 @@
 
 // Specialisation for memory allocation with class constructor calls
 
-void *operator new (size_t size, lua_State *state);
-void *operator new [] (size_t size, lua_State *state);
+inline void *operator new (size_t size, lua_State *state)
+{
+	return lua_newuserdata(state, size);
+}
+
+inline void *operator new [] (size_t size, lua_State *state)
+{
+	return lua_newuserdata(state, size);
+}
 
 #endif // file
 

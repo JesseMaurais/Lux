@@ -153,17 +153,6 @@ template <class Real> struct lux_Complex
 	}
 };
 
-template <> inline
-std::complex<double> lux_to(lua_State *state, int stack)
-{
-	typedef lux_Store<std::complex<double>> Type;
-
-	if (lua_isnumber(state, stack))
-	return lua_tonumber(state, stack);
-	else
-	return Type::to(state, stack);
-}
-
 // Relations are determined relative to the origin on the complex plane
 
 template <class Real> inline
@@ -176,6 +165,19 @@ template <class Real> inline
 bool operator <= (const std::complex<Real> &c, const std::complex<Real> &d)
 {
 	return std::norm(c) <= std::norm(d);
+}
+
+// Overloaded for implicit conversion from related numeric type
+
+template <> inline
+std::complex<double> lux_to(lua_State *state, int stack)
+{
+	typedef lux_Store<std::complex<double>> Type;
+
+	if (lua_isnumber(state, stack))
+	return lua_tonumber(state, stack);
+	else
+	return Type::to(state, stack);
 }
 
 // Specialize several array methods for copmlex type //////////////////////////
@@ -291,7 +293,10 @@ int lux_Array<std::complex<double>>::open(lua_State *state)
 		{"search", search},
 		{"write", write},
 		{"read", read},
+		{"copy", copy},
+		{"swap", swap},
 		{"new", __new},
+		{"__gc", __gc},
 		{"__tostring", __tostring},
 		{"__concat", __concat},
 		{"__newindex", __newindex},
@@ -307,7 +312,6 @@ int lux_Array<std::complex<double>>::open(lua_State *state)
 		{"__eq", __eq},
 		{"__lt", __lt},
 		{"__le", __le},
-		{"__gc", __gc},
 		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);

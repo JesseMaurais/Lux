@@ -20,9 +20,6 @@
 
 #include "lxstore.hpp"
 
-/// Print entire stack to stdout
-int lux_stackdump(lua_State *state);
-
 /// Variadic push -- for stacking many data at once
 template <class User, class... Args> inline
 int lux_push(lua_State *state, User data, Args... args)
