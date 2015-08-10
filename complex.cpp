@@ -8,8 +8,6 @@
  * the less-than-or-equal operators are defined for complex numbers, in which
  * their order are determined by their relative distance to the origin in the
  * complex plane. This allows sorting arrays of complex numbers.
- *
- * This is highly experimental.
  */
 
 #include "lux.hpp"
@@ -37,7 +35,6 @@ bool operator <= (const complex<real> &c, const complex<real> &d)
 template <> inline
 complex<float> lux_to<complex<float>>(lua_State *state, int stack)
 {
-	
 	if (lua_isnumber(state, stack)) return lua_tonumber(state, stack);
 	return lux_Store<complex<float>>::to(state, stack);
 }

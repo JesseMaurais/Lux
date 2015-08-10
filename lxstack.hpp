@@ -12,11 +12,7 @@
  * function call overhead. They should be thought of as rules which map from
  * C++ types to Lua types rather than usual functions. Any types not already
  * represented here can be implemented elsewhere and if they are seen by Lux
- * then they will also be substituted where appropriate. That's to say, this
- * is an extensible type system. For example: C++ enums are always qualified
- * as types, so that push/to functions can use the luaL_checkoption to alter
- * string arguments to enums and back again, or they can simply forward the
- * numerical value of the enum.
+ * then they will also be substituted where appropriate.
  */
 
 #include "lxstore.hpp"
@@ -292,7 +288,8 @@ float lux_to<float>(lua_State *state, int stack)
 {
 	return lua_tonumber(state, stack);
 }
-template <> double lux_to<double>(lua_State *state, int stack)
+template <> inline
+double lux_to<double>(lua_State *state, int stack)
 {
 	return lua_tonumber(state, stack);
 }
@@ -350,12 +347,8 @@ unsigned long long lux_to<unsigned long long>(lua_State *state, int stack)
 template <> inline
 const char *lux_to<const char *>(lua_State *state, int stack)
 {
-	if (lua_isstring(state, stack))
-	{
-		return lua_tostring(state, stack);
-	}
-	typedef lux_Store<char*> Type;
-	return Type::to(state, stack);
+	if (lua_isstring(state, stack)) return lua_tostring(state, stack);
+	return lux_Store<char*>::to(state, stack);
 }
 
 // Special case of C FILE handle

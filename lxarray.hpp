@@ -296,11 +296,11 @@ template <class User> struct lux_Array
 		lux_argcheck(state, 2, 0 < parts);
 		lux_argcheck(state, 2, parts < size);
 		// Setup iterator and size
-		auto data = user->data;
+		User *data = user->data;
 		size -= parts;
 		// Store in a table
 		lua_newtable(state);
-		while (--parts) user->push(state, data++, size, 1);
+		while (parts--) user->push(state, data++, size, 1);
 		return 1;
 	}
 
@@ -430,7 +430,7 @@ template <class User> struct lux_Array
 		// Half size of array
 		int half = size >> 1;
 		User temp; // for swap element
-		for (int i = 0, j = size - 1; i < half; ++i, --j)
+		for (int i = 0, j = size - 1; i < j; ++i, --j)
 		{
 			temp = user->data[i];
 			user->data[i] = user->data[j];
@@ -548,7 +548,7 @@ template <class User> struct lux_Array
 		lux_argcheck(state, 1, 0 < size);
 		// Find first index of this element
 		User key = lux_to<User>(state, 2);
-		// Standard C library 'bsearch'
+		// Binary search in standard C
 		union { void *find; User *data; };
 		find = bsearch(&key, user->data, size, sizeof(User), compare);
 		// Index (from 1) of first element in array if found, else nil

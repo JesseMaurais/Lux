@@ -12,7 +12,7 @@
  *	if (pipe(fd) < 0) return lux_perror(state);
  *	else return lux_push(state, fd[0], fd[1]);
  *
- * And the fopen function might translated
+ * And the fopen function might be translated
  *
  *	auto path = lua_tostring(state, arg);
  *	auto file = fopen(path, "rw");
@@ -29,7 +29,7 @@
 #include <cstring>
 #include <cerrno>
 
-/// Imitate the behavior of the perror function in a given state
+/// Imitate the behavior of perror in a given state
 static inline int lux_perror(lua_State *state)
 {
 	return luaL_error(state, "%s", strerror(errno));
@@ -41,8 +41,13 @@ static inline int lux_argerror(lua_State *state, int arg=1)
 	return luaL_argerror(state, arg, strerror(errno));
 }
 
+#ifndef NDEBUG
 /// When you want to report the failed condition as the string message
 #define lux_argcheck(state, arg, cond) luaL_argcheck(state, (cond), arg, #cond)
+#else
+// Compile out to nothing, do no check
+#define lux_argcheck(state, arg, cond)
+#endif
 
 #endif // file
 
