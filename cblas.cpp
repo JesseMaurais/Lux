@@ -1,5 +1,5 @@
 #include "lux.hpp"
-#include "cblas.h"
+#include "cblas.hpp"
 
 // Convert from strings to CBLAS enumerations
 

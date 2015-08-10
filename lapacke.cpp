@@ -1,19 +1,3 @@
-/**
- * LAPACKE module for Lua
- *
- * Linear Algebra PACKage is the defacto standard for high-end computation of
- * of common expressions in linear algebra and finding the solution to linear
- * systems of equations. Like BLAS it was first written in FORTRAN 77 but has
- * been ported to a number of different languages. The LAPACKE, used here, is 
- * the preferend C binding to the Fortran library. Lux uses C++ to bind the C
- * code to Lua. So there's 4 languages at use here, or maybe 3.5 if you count
- * C++ as only partially above C. 
- *
- * Several functions ending with "*fsx" and "*vxx" are absent from the shared
- * library even though they are defined in the header. They are commented out
- * in the registry below to prevent linking errors when importing the module.
- */
-
 // Use boolean for Lua
 #define lapack_logical bool
 

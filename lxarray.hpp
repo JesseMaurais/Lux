@@ -34,51 +34,75 @@ template <class User> struct lux_Array
 	// Pointer storage implementation
 	typedef lux_Store<User*> Type;
 
-	/// Array allocation function
-	static int __new(lua_State *state)
+	// Construct this array from an integer
+	static int fromnumber(lua_State *state)
 	{
-		lux_Chars shift;
-		const char *string;
-		ssize_t length;
-		size_t size;
-		User *data;
-		// Check constructor argument
-		switch (lua_type(state, 1))
-		{
-		  default:
-			// We only construct from these argument types
-			return luaL_argerror(state, 1, "number, table, string");
-		  case LUA_TNUMBER:
-			size = lua_tointeger(state, 1);
-			lux_argcheck(state, 1, 0 < size);
-			data = new User [size];
-			break;
-		  case LUA_TTABLE:
-			// Copy table contents
-			size = luaL_len(state, 1);
-			data = new User [size];
-			lua_pushnil(state);
-			for (int it = 0; lua_next(state, 1); ++it)
-			{
-			 data[it] = lux_to<User>(state, 3);
-			 lua_pop(state, 1);
-			}
-			break;
-		  case LUA_TSTRING:
-			// Get UTF-8 encoded string with length
-			string = lua_tolstring(state, 1, &size);
-			length = shift.stringsize(string, size);
-			// Check the string for encoding errors
-			if (length < 0)	return lux_argerror(state, 1);
-			else shift.reset();
-			// Create and convert
-			data = new User [length];
-			size = shift.to(data, string, length);
-			break;
-		};
+		// Argument is the array's size
+		int size = lua_tointeger(state, 1);
+		// Check that the size is valid
+		lux_argcheck(state, 1, 0 < size);
+		// Create the data for array
+		User *data = new User [size];
 		// Put the array on the stack
 		Type::push(state, data, size);
 		return 1;
+	}
+
+	// Construct this array from a table
+	static int fromtable(lua_State *state)
+	{
+		int size = luaL_len(state, 1);
+		User *data = new User [size];
+		lua_pushnil(state); // first
+		// Copy every element of the table as numeric
+		for (int item = 0; lua_next(state, 1); ++item)
+		{
+			// Convert the element to User type
+			data[item] = lux_to<User>(state, 3);
+			lua_pop(state, 1); // pop key
+		}
+		// Put the array on the stack
+		Type::push(state, data, size);
+		return 1;
+	}
+
+	// Construct this array from a string
+	static int fromstring(lua_State *state)
+	{
+		size_t size;
+		lux_Chars shift;
+		// Get UTF-8 encoded string and it's size in bytes
+		const char *string = lua_tolstring(state, 1, &size);
+		// Find the number multibyte characters
+		int length = shift.stringsize(string, size);
+		// Check the string for encoding errors
+		if (length < 0) return lux_argerror(state, 1);
+		else shift.reset();
+		// Create array and convert
+		User *data = new User [length];
+		size = shift.to(data, string, length);
+		// Put the array on the stack
+		Type::push(state, data, size);
+		return 1;
+	}
+
+	/// Array allocation function
+	static int __new(lua_State *state)
+	{
+		switch (lua_type(state, 1))
+		{
+		case LUA_TNUMBER:
+			// Given the array size
+			return fromnumber(state);
+		case LUA_TTABLE:
+			// Copy table contents
+			return fromtable(state);
+		case LUA_TSTRING:
+			// Convert UTF-8 string
+			return fromstring(state);
+		};
+		// We only construct from these argument types
+		return luaL_argerror(state, 1, "number, table, string");
 	}
 
 	/// Garbage collection callback
@@ -162,7 +186,14 @@ template <class User> struct lux_Array
 			if (item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
-			buffer.addvalue(); // make string
+			if (luaL_callmeta(state, -1, "__tostring"))
+			{
+				buffer.addvalue(); // add string
+				lua_pop(state, 1); // pop value
+				continue;
+			}
+			// Try the value
+			buffer.addvalue();
 		}
 		buffer.push();
 		return 1;

@@ -15,7 +15,8 @@
  * then they will also be substituted where appropriate. That's to say, this
  * is an extensible type system. For example: C++ enums are always qualified
  * as types, so that push/to functions can use the luaL_checkoption to alter
- * string arguments to enums and back again. 
+ * string arguments to enums and back again, or they can simply forward the
+ * numerical value of the enum.
  */
 
 #include "lxstore.hpp"
