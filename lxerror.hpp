@@ -41,13 +41,8 @@ static inline int lux_argerror(lua_State *state, int arg=1)
 	return luaL_argerror(state, arg, strerror(errno));
 }
 
-#ifndef NDEBUG
 /// When you want to report the failed condition as the string message
 #define lux_argcheck(state, arg, cond) luaL_argcheck(state, (cond), arg, #cond)
-#else
-// Compile out to nothing, do no check
-#define lux_argcheck(state, arg, cond)
-#endif
 
 #endif // file
 

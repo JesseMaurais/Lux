@@ -4,7 +4,6 @@
 
 extern "C" int luaopen_array(lua_State *state)
 {
-	lua_newtable(state);
 	luaL_Reg regs [] =
 	{
 	{"int", lux_Array<int>::open},
@@ -18,8 +17,8 @@ extern "C" int luaopen_array(lua_State *state)
 	for (auto reg=regs; reg->name; ++reg)
 	{
 	 luaL_requiref(state, reg->name, reg->func, true);
-	 lua_setfield(state, -2, reg->name);
+	 lua_pop(state, 1);
 	}
-	return 1;
+	return 0;
 }
 

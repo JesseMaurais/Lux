@@ -34,8 +34,8 @@ template <class User> struct lux_Array
 	// Pointer storage implementation
 	typedef lux_Store<User*> Type;
 
-	// Construct this array from an integer
-	static int fromnumber(lua_State *state)
+	// Construct this array given a size
+	static int fromsize(lua_State *state)
 	{
 		// Argument is the array's size
 		int size = lua_tointeger(state, 1);
@@ -92,8 +92,8 @@ template <class User> struct lux_Array
 		switch (lua_type(state, 1))
 		{
 		case LUA_TNUMBER:
-			// Given the array size
-			return fromnumber(state);
+			// An array with size
+			return fromsize(state);
 		case LUA_TTABLE:
 			// Copy table contents
 			return fromtable(state);
@@ -102,7 +102,7 @@ template <class User> struct lux_Array
 			return fromstring(state);
 		};
 		// We only construct from these argument types
-		return luaL_argerror(state, 1, "number, table, string");
+		return luaL_argerror(state, 1, "size, table, string");
 	}
 
 	/// Garbage collection callback
@@ -179,6 +179,7 @@ template <class User> struct lux_Array
 		int size = abs(user->size);
 		// Build up a string
 		lux_Buffer buffer(state);
+		bool meta = true; // use __tostring
 		// Iterate over each item in the array
 		for (int item = 0; item < size; ++item)
 		{
@@ -186,12 +187,14 @@ template <class User> struct lux_Array
 			if (item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
+			if (meta) // try to use metamethod
 			if (luaL_callmeta(state, -1, "__tostring"))
 			{
 				buffer.addvalue(); // add string
 				lua_pop(state, 1); // pop value
 				continue;
 			}
+			else meta = false;
 			// Try the value
 			buffer.addvalue();
 		}
@@ -621,25 +624,30 @@ template <class User> struct lux_Array
 	/// Copy array contents to another
 	static int copy(lua_State *state)
 	{
-		Type *user = Type::check(state, 1);
+		Type *from = Type::check(state, 1);
+		// Copy from pointer not allowed
+		int from_size = abs(from->size);
+		lux_argcheck(state, 1, 0 < from_size);
+		// Do we have a second argument?
 		Type *to = Type::test(state, 2);
-		// Second argument?
 		if (!to)
 		{
-			int size = abs(user->size);
-			User *data = new User [size];
-			Type::push(state, data, size);
+			User *data = new User [from_size];
 			// Copy contents of original to new array
-			memcpy(data, user->data, size*sizeof(User));
+			memcpy(data, from->data, from_size*sizeof(User));
+			// Put the new array on the stack
+			Type::push(state, data, from_size);
 			return 1;
 		}
 		else
 		{
-			int m = abs(to->size);
-			int n = abs(user->size);
-			int size = n < m ? n : m;
+			int to_size = abs(to->size);
+			// Arrays must be the same size to complete
+			lux_argcheck(state, 2, from_size == to_size);
+			// We copy only the minimum of the two array sizes
+			int size = from_size < to_size ? from_size : to_size;
 			// Copy contents over with possible overlap
-			memmove(to->data, user->data, size*sizeof(User));
+			memmove(to->data, from->data, size*sizeof(User));
 			return 0;
 		}
 	}
@@ -647,13 +655,19 @@ template <class User> struct lux_Array
 	/// Swap contents of two arrays
 	static int swap(lua_State *state)
 	{
+		// Get data for the first array
 		Type *user = Type::check(state, 1);
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Get data for the second array
 		Type *with = Type::check(state, 2);
-		Type temp[1]; // temporary store
-		// Swap content rather than data
-		memcpy(temp, user, sizeof(Type));
-		memcpy(user, with, sizeof(Type));
-		memcpy(with, temp, sizeof(Type));
+		int size2  = abs(with->size);
+		lux_argcheck(state, 2, size2 == size);
+		// Buffer user's contents during swap
+		User temp[size];
+		memcpy(temp, user->data, sizeof(temp));
+		memcpy(user->data, with->data, sizeof(temp));
+		memcpy(with->data, temp, sizeof(temp));
 		return 0;
 	}
 

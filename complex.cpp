@@ -81,7 +81,7 @@ template <class Real> struct lux_Complex
 		auto &data = obj(state);
 		auto real = data.real();
 		auto imag = data.imag();
-		lua_pushfstring(state, "i%f + %f", imag, real);
+		lua_pushfstring(state, "(%f, %f)", real, imag);
 		return 1;
 	}
 
@@ -162,6 +162,84 @@ template <class Real> struct lux_Complex
 		return 1;
 	}
 
+	// Real component of the number
+	static int real(lua_State *state)
+	{
+		if (lua_isnone(state, 2))
+		{
+		Real value = obj(state, 1).real();
+		lua_pushnumber(state, value);
+		return 1;
+		}
+		else
+		{
+		Real value = lua_tonumber(state, 2);
+		obj(state, 1).real(value);
+		return 0;
+		}
+	}
+
+	// Imaginary component of the number
+	static int imag(lua_State *state)
+	{
+		if (lua_isnone(state, 2))
+		{
+		Real value = obj(state, 1).imag();
+		lua_pushnumber(state, value);
+		return 1;
+		}
+		else
+		{
+		Real value = lua_tonumber(state, 2);
+		obj(state, 1).imag(value);
+		return 0;
+		}
+	}
+
+	// Angular component in radians
+	static int arg(lua_State *state)
+	{
+		lua_pushnumber(state, std::arg(obj(state)));
+		return 1;
+	}
+
+	// Absolute value (magnitude)
+	static int abs(lua_State *state)
+	{
+		lua_pushnumber(state, std::abs(obj(state)));
+		return 1;
+	}
+
+	// Squared magnitude (normal)
+	static int norm(lua_State *state)
+	{
+		lua_pushnumber(state, std::norm(obj(state)));
+		return 1;
+	}
+
+	// Create from polar coordinates
+	static int polar(lua_State *state)
+	{
+		Real radius = lua_tonumber(state, 1);
+		Real angle = lua_tonumber(state, 2);
+		Type::push(state, std::polar(radius, angle));
+		return 1;
+	}
+
+	// Create as anothers conjugate
+	static int conj(lua_State *state)
+	{
+		Type::push(state, std::conj(obj(state)));
+		return 1;
+	}
+
+	// Projection onto Riemann sphere
+	static int proj(lua_State *state)
+	{
+		Type::push(state, std::proj(obj(state)));
+		return 1;
+	}
+
 	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
@@ -184,6 +262,20 @@ template <class Real> struct lux_Complex
 		lua_pop(state, 1);
 		// Open the complex array type
 		lux_Array<Complex>::open(state);
+		// Additional methods
+		luaL_Reg index[] =
+		{
+		{"real", real},
+		{"imag", imag},
+		{"arg", arg},
+		{"abs", abs},
+		{"norm", norm},
+		{"polar", polar},
+		{"conj", conj},
+		{"proj", proj},
+		{nullptr}
+		};
+		luaL_setfuncs(state, index, 0);
 		// The imaginary sqrt(-1)
 		lua_pushliteral(state, "i");
 		lux_push(state, Complex(0, 1));
@@ -286,6 +378,7 @@ extern "C" int luaopen_complex(lua_State *state)
 	{
 	{"complex", lux_Complex<float>::open},
 	{"complexd", lux_Complex<double>::open},
+	{"complexld", lux_Complex<long double>::open},
 	{nullptr}
 	};
 	for (auto r=regs; r->name; ++r)
