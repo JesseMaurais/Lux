@@ -12,6 +12,7 @@
 
 #include "lux.hpp"
 #include <complex>
+#include <cstdio>
 #include <cmath>
 
 template <class real> using complex = std::complex<real>;
@@ -79,9 +80,11 @@ template <class Real> struct lux_Complex
 	static int __tostring(lua_State *state)
 	{
 		auto &data = obj(state);
-		auto real = data.real();
-		auto imag = data.imag();
-		lua_pushfstring(state, "(%f, %f)", real, imag);
+		double re = data.real();
+		double im = data.imag();
+		static char string[128];
+		sprintf(string, "%gi%+g", im, re);
+		lua_pushstring(state, string);
 		return 1;
 	}
 
@@ -221,8 +224,8 @@ template <class Real> struct lux_Complex
 	static int polar(lua_State *state)
 	{
 		Real radius = lua_tonumber(state, 1);
-		Real angle = lua_tonumber(state, 2);
-		Type::push(state, std::polar(radius, angle));
+		Real radian = lua_tonumber(state, 2);
+		Type::push(state, std::polar(radius, radian));
 		return 1;
 	}
 
