@@ -1,13 +1,11 @@
-// Use boolean for Lua
+// Use bool for logic
 #define lapack_logical bool
+// Use C++ complex class
+#define LAPACK_COMPLEX_CPP
 
-// Complex as pairs of floats
-#define LAPACK_COMPLEX_CUSTOM
-#define lapack_complex_float float
-#define lapack_complex_double double
-
-#include <lapacke.h>
 #include "lux.hpp"
+#include "cblas.hpp"
+#include "lapacke.hpp"
 
 // Put library prefix in the table, omit in name
 #define REG(reg) {#reg, lux_cast(LAPACKE_##reg)}

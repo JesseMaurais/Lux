@@ -1,9 +1,10 @@
 #ifndef CBLAS_H
 #define CBLAS_H
 #include <stddef.h>
+#include <complex>
 
 /* For easier switching between implementations of the complex numbers */
-template <class number> using complex = number;
+template <class real> using complex = std::complex<real>;
 
 /* Allow the use in C++ code.  */
 #ifdef __cplusplus

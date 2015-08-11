@@ -3,7 +3,7 @@
 
 // Convert from strings to CBLAS enumerations
 
-template <>
+template <> inline
 enum CBLAS_ORDER lux_to<enum CBLAS_ORDER>(lua_State *state, int stack)
 {
 	auto arg = lua_tostring(state, stack);
@@ -21,7 +21,7 @@ enum CBLAS_ORDER lux_to<enum CBLAS_ORDER>(lua_State *state, int stack)
 	luaL_argerror(state, stack, "R or C");
 }
 
-template <>
+template <> inline
 enum CBLAS_TRANSPOSE lux_to<enum CBLAS_TRANSPOSE>(lua_State *state, int stack)
 {
 	auto arg = lua_tostring(state, stack);
@@ -46,7 +46,7 @@ enum CBLAS_TRANSPOSE lux_to<enum CBLAS_TRANSPOSE>(lua_State *state, int stack)
 	luaL_argerror(state, stack, "t, T, n, N, c, C");
 }
 
-template <>
+template <> inline
 enum CBLAS_UPLO lux_to<enum CBLAS_UPLO>(lua_State *state, int stack)
 {
 	auto arg = lua_tostring(state, stack);
@@ -64,7 +64,7 @@ enum CBLAS_UPLO lux_to<enum CBLAS_UPLO>(lua_State *state, int stack)
 	luaL_argerror(state, stack, "U, u, L, l");
 }
 
-template <>
+template <> inline
 enum CBLAS_DIAG lux_to<enum CBLAS_DIAG>(lua_State *state, int stack)
 {
 	auto arg = lua_tostring(state, stack);
@@ -82,7 +82,7 @@ enum CBLAS_DIAG lux_to<enum CBLAS_DIAG>(lua_State *state, int stack)
 	luaL_argerror(state, stack, "U, u, N, n");
 }
 
-template <>
+template <> inline
 enum CBLAS_SIDE lux_to<enum CBLAS_SIDE>(lua_State *state, int stack)
 {
 	auto arg = lua_tostring(state, stack);
@@ -100,6 +100,36 @@ enum CBLAS_SIDE lux_to<enum CBLAS_SIDE>(lua_State *state, int stack)
 	luaL_argerror(state, stack, "L, l, R, r");
 }
 
+// Rewrite these so that the we get a complex return value
+
+static complex<float> cblas_cdotu(const int N, const complex<float> *X, const int incX, const complex<float> *Y, const int incY)
+{
+	complex<float> dotu;
+	cblas_cdotu_sub(N, X, incX, Y, incY, &dotu);
+	return dotu;
+}
+
+static complex<float> cblas_cdotc(const int N, const complex<float> *X, const int incX, const complex<float> *Y, const int incY)
+{
+	complex<float> dotc;
+	cblas_cdotu_sub(N, X, incX, Y, incY, &dotc);
+	return dotc;
+}
+
+static complex<double> cblas_zdotu(const int N, const complex<double> *X, const int incX, const complex<double> *Y, const int incY)
+{
+	complex<double> dotu;
+	cblas_zdotu_sub(N, X, incX, Y, incY, &dotu);
+	return dotu;
+}
+
+static complex<double> cblas_zdotc(const int N, const complex<double> *X, const int incX, const complex<double> *Y, const int incY)
+{
+	complex<double> dotc;
+	cblas_zdotu_sub(N, X, incX, Y, incY, &dotc);
+	return dotc;
+}
+
 // Lua C module entry point
 
 extern "C" int luaopen_cblas(lua_State *state)
@@ -107,6 +137,7 @@ extern "C" int luaopen_cblas(lua_State *state)
 	luaL_Reg regs[] = 
 	{
 	// SINGLE PRECISION REAL
+
 	// level 1
 	{"sdsdot", lux_cast(cblas_sdsdot)},
 	{"dsdot", lux_cast(cblas_dsdot)},
@@ -148,9 +179,10 @@ extern "C" int luaopen_cblas(lua_State *state)
 	{"strsm", lux_cast(cblas_strsm)},
 
 	// SINGLE PRECISION COMPLEX
+
 	// level 1
-	{"cdotu", lux_cast(cblas_cdotu_sub)},
-	{"cdotc", lux_cast(cblas_cdotc_sub)},
+	{"cdotu", lux_cast(cblas_cdotu)},
+	{"cdotc", lux_cast(cblas_cdotc)},
 	{"cnrm2", lux_cast(cblas_scnrm2)},
 	{"casum", lux_cast(cblas_scasum)},
 	{"icamax", lux_cast(cblas_icamax)},
@@ -189,6 +221,7 @@ extern "C" int luaopen_cblas(lua_State *state)
 	{"ctrsm", lux_cast(cblas_ctrsm)},
 
 	// SINGLE PRECISION REAL
+
 	// level 1
 	{"ddot", lux_cast(cblas_ddot)},
 	{"dnrm2", lux_cast(cblas_dnrm2)},
@@ -228,9 +261,10 @@ extern "C" int luaopen_cblas(lua_State *state)
 	{"dtrsm", lux_cast(cblas_dtrsm)},
 
 	// DOUBLE PRECISION COMPLEX
+
 	// level 1
-	{"zdotu", lux_cast(cblas_zdotu_sub)},
-	{"zdotc", lux_cast(cblas_zdotc_sub)},
+	{"zdotu", lux_cast(cblas_zdotu)},
+	{"zdotc", lux_cast(cblas_zdotc)},
 	{"znrm2", lux_cast(cblas_dznrm2)},
 	{"zasum", lux_cast(cblas_dzasum)},
 	{"izamax", lux_cast(cblas_izamax)},

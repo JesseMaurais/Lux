@@ -6,7 +6,6 @@
  */
 
 #include "lxstack.hpp"
-#include <cstring>
 
 // Similar to luaL_Reg but for all classes for which lux_push is defined
 

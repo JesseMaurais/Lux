@@ -285,7 +285,7 @@ extern "C" int luaopen_complex(lua_State *state)
 	luaL_Reg regs[] =
 	{
 	{"complex", lux_Complex<float>::open},
-	{"copmlexd", lux_Complex<double>::open},
+	{"complexd", lux_Complex<double>::open},
 	{nullptr}
 	};
 	for (auto r=regs; r->name; ++r)

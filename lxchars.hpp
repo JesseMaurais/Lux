@@ -1,13 +1,29 @@
 #ifndef __lxchars__
 #define __lxchars__
 
+/**
+ * Support for the Unicode Transformation Format (UTF) standard used to encode
+ * and decode strings from the Universal Character Set (UCS) which is the most
+ * common superset of ASCII, which is used to encode a majority of the world's
+ * text. The advantage of UCS is that it covers more characters from languages
+ * all around the world, and much more. UTF is used to pack UCS code points in
+ * multibyte sequence stored in C as a conventional char array. Information on
+ * the Unicode standard is easily found online.
+ *
+ * Noteworthy here is that we are using the C11 functions for coding the multi
+ * byte sequence because as of the time of writing, many C++11 compilers don't
+ * come with the necessary headers. I also tend to prefer C libraries for this
+ * kind of task. Unconventionally, we are storing the code points in arbitrary
+ * arrays (not just those of char, char16_t and char32_t). This is done safely
+ * by checking the bit width of the base type and defaulting to a copying loop
+ * when the type is not a perfect match. 
+ */
+
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <wchar.h>
 #include <uchar.h>
-
-// Some compilers (GCC) lack the codecvt header for C++11
 
 struct lux_Chars : mbstate_t
 {
