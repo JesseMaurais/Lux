@@ -34,73 +34,14 @@
 #ifndef _LAPACKE_H_
 #define _LAPACKE_H_
 
-/*
-*  Turn on HAVE_LAPACK_CONFIG_H to redefine C-LAPACK datatypes
-*/
-#ifdef HAVE_LAPACK_CONFIG_H
-#include "lapacke_config.h"
-#endif
+#include <complex>
+#include <cstdlib>
 
-#include <stdlib.h>
-
-#ifndef lapack_int
-#define lapack_int     int
-#endif
-
-#ifndef lapack_logical
-#define lapack_logical lapack_int
-#endif
-
-/* Complex types are structures equivalent to the
-* Fortran complex types COMPLEX(4) and COMPLEX(8).
-*
-* One can also redefine the types with his own types
-* for example by including in the code definitions like
-*
-* #define lapack_complex_float std::complex<float>
-* #define lapack_complex_double std::complex<double>
-*
-* or define these types in the command line:
-*
-* -Dlapack_complex_float="std::complex<float>"
-* -Dlapack_complex_double="std::complex<double>"
-*/
-
-#ifndef LAPACK_COMPLEX_CUSTOM
-
-/* Complex type (single precision) */
-#ifndef lapack_complex_float
-#include <complex.h>
-#define lapack_complex_float    float _Complex
-#endif
-
-#ifndef lapack_complex_float_real
-#define lapack_complex_float_real(z)       (creal(z))
-#endif
-
-#ifndef lapack_complex_float_imag
-#define lapack_complex_float_imag(z)       (cimag(z))
-#endif
-
-lapack_complex_float lapack_make_complex_float( float re, float im );
-
-/* Complex type (double precision) */
-#ifndef lapack_complex_double
-#include <complex.h>
-#define lapack_complex_double   double _Complex
-#endif
-
-#ifndef lapack_complex_double_real
-#define lapack_complex_double_real(z)      (creal(z))
-#endif
-
-#ifndef lapack_complex_double_imag
-#define lapack_complex_double_imag(z)       (cimag(z))
-#endif
-
-lapack_complex_double lapack_make_complex_double( double re, double im );
-
-#endif
+// Modified these to my personal liking
+using lapack_complex_float = std::complex<float>;
+using lapack_complex_double = std::complex<double>;
+using lapack_int = int;
+using lapack_logical = bool;
 
 #ifdef __cplusplus
 extern "C" {

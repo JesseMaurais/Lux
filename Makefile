@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-std=c++11
 SRC=lux.hpp lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxerror.hpp lxtools.hpp
-OBJ=array.so complex.so cblas.so lapacke.so random.so thread.so cstdlib.so cstdio.so cstring.so csignal.so ctime.so clocale.so cfenv.so unistd.so termios.so test.so
+OBJ=array.so complex.so cblas.so lapacke.so random.so thread.so cstdlib.so cstdio.so clocale.so cfenv.so unistd.so 
 
 all: $(OBJ)
 
@@ -16,18 +16,15 @@ uninstall:
 	rm /usr/local/include/lux/*
 	rmdir /usr/local/include/lux
 
-%.so: %.cpp $(SRC)
+%.so: src/%.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
 
-cfenv.so: cfenv.cpp $(SRC)
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lm
-
-cblas.so: cblas.cpp $(SRC)
+cblas.so: src/cblas.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lblas
 
-lapacke.so: lapacke.cpp $(SRC)
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lblas -llapacke
+lapacke.so: src/lapacke.cpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llapacke
 
-thread.so: thread.cpp $(SRC)
+thread.so: src/thread.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -pthread
 

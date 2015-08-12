@@ -1,10 +1,4 @@
-// Use bool for logic
-#define lapack_logical bool
-// Use C++ complex class
-#define LAPACK_COMPLEX_CPP
-
 #include "lux.hpp"
-#include "cblas.hpp"
 #include "lapacke.hpp"
 
 // Put library prefix in the table, omit in name
