@@ -73,7 +73,7 @@ template <class User> struct lux_Array
 		lux_Chars shift;
 		// Get UTF-8 encoded string and it's size in bytes
 		const char *string = lua_tolstring(state, 1, &size);
-		// Find the number multibyte characters
+		// Find the number of multibyte characters
 		int length = shift.stringsize(string, size);
 		// Check the string for encoding errors
 		if (length < 0) return lux_argerror(state, 1);
@@ -82,6 +82,23 @@ template <class User> struct lux_Array
 		User *data = new User [length];
 		size = shift.to(data, string, length);
 		// Put the array on the stack
+		Type::push(state, data, size);
+		return 1;
+	}
+
+	/// Copy this array from another one
+	static int fromarray(lua_State *state)
+	{
+		// Create with matching size
+		int size = luaL_len(state, 1);
+		User *data = new User [size];
+		// Use the index metamethod for generality
+		for (int i = 0, j = 1; i < size; ++i, ++j)
+		{
+			lua_geti(state, 1, j);
+			data[i] = lux_to<User>(state, -1);
+			lua_pop(state, 1);
+		}
 		Type::push(state, data, size);
 		return 1;
 	}
@@ -100,6 +117,9 @@ template <class User> struct lux_Array
 		case LUA_TSTRING:
 			// Convert UTF-8 string
 			return fromstring(state);
+		case LUA_TUSERDATA:
+			// Copied from an array
+			return fromarray(state);
 		};
 		// We only construct from these argument types
 		return luaL_argerror(state, 1, "size, table, string");

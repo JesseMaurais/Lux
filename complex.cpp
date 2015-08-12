@@ -83,6 +83,7 @@ template <class Real> struct lux_Complex
 		double re = data.real();
 		double im = data.imag();
 		static char string[128];
+		// C stdio has precision flags
 		sprintf(string, "%gi%+g", im, re);
 		lua_pushstring(state, string);
 		return 1;
@@ -101,9 +102,9 @@ template <class Real> struct lux_Complex
 	static int __mul(lua_State *state)
 	{
 		if (lua_isnumber(state, 2))
-		lux_push(state, obj(state, 1) * val(state, 2));
+		Type::push(state, obj(state, 1) * val(state, 2));
 		else
-		lux_push(state, obj(state, 1) * obj(state, 2));
+		Type::push(state, obj(state, 1) * obj(state, 2));
 		return 1;
 	}
 
@@ -111,9 +112,9 @@ template <class Real> struct lux_Complex
 	static int __div(lua_State *state)
 	{
 		if (lua_isnumber(state, 2))
-		lux_push(state, obj(state, 1) / val(state, 2));
+		Type::push(state, obj(state, 1) / val(state, 2));
 		else
-		lux_push(state, obj(state, 1) / obj(state, 2));
+		Type::push(state, obj(state, 1) / obj(state, 2));
 		return 1;
 	}
 
@@ -121,9 +122,9 @@ template <class Real> struct lux_Complex
 	static int __add(lua_State *state)
 	{
 		if (lua_isnumber(state, 2))
-		lux_push(state, obj(state, 1) + val(state, 2));
+		Type::push(state, obj(state, 1) + val(state, 2));
 		else
-		lux_push(state, obj(state, 1) + obj(state, 2));
+		Type::push(state, obj(state, 1) + obj(state, 2));
 		return 1;
 	}
 
@@ -131,9 +132,9 @@ template <class Real> struct lux_Complex
 	static int __sub(lua_State *state)
 	{
 		if (lua_isnumber(state, 2))
-		lux_push(state, obj(state, 1) - val(state, 2));
+		Type::push(state, obj(state, 1) - val(state, 2));
 		else
-		lux_push(state, obj(state, 1) - obj(state, 2));
+		Type::push(state, obj(state, 1) - obj(state, 2));
 		return 1;
 	}
 
@@ -168,35 +169,15 @@ template <class Real> struct lux_Complex
 	// Real component of the number
 	static int real(lua_State *state)
 	{
-		if (lua_isnone(state, 2))
-		{
-		Real value = obj(state, 1).real();
-		lua_pushnumber(state, value);
+		lua_pushnumber(state, std::real(obj(state)));
 		return 1;
-		}
-		else
-		{
-		Real value = lua_tonumber(state, 2);
-		obj(state, 1).real(value);
-		return 0;
-		}
 	}
 
 	// Imaginary component of the number
 	static int imag(lua_State *state)
 	{
-		if (lua_isnone(state, 2))
-		{
-		Real value = obj(state, 1).imag();
-		lua_pushnumber(state, value);
+		lua_pushnumber(state, std::imag(obj(state)));
 		return 1;
-		}
-		else
-		{
-		Real value = lua_tonumber(state, 2);
-		obj(state, 1).imag(value);
-		return 0;
-		}
 	}
 
 	// Angular component in radians
@@ -220,15 +201,6 @@ template <class Real> struct lux_Complex
 		return 1;
 	}
 
-	// Create from polar coordinates
-	static int polar(lua_State *state)
-	{
-		Real radius = lua_tonumber(state, 1);
-		Real radian = lua_tonumber(state, 2);
-		Type::push(state, std::polar(radius, radian));
-		return 1;
-	}
-
 	// Create as anothers conjugate
 	static int conj(lua_State *state)
 	{
@@ -240,6 +212,15 @@ template <class Real> struct lux_Complex
 	static int proj(lua_State *state)
 	{
 		Type::push(state, std::proj(obj(state)));
+		return 1;
+	}
+
+	// Create from polar coordinates
+	static int polar(lua_State *state)
+	{
+		Real radius = lua_tonumber(state, 1);
+		Real radian = lua_tonumber(state, 2);
+		Type::push(state, std::polar(radius, radian));
 		return 1;
 	}
 
