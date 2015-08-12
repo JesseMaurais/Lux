@@ -1,3 +1,9 @@
+/**
+ * Support for pre-emptive multi-threading with mutual exclusion. Based on the
+ * C++11 standard for threads. It's somewhat incomplete since it does not also
+ * have support for condition variables and thread local storage.
+ */
+
 #include "lux.hpp"
 #include <thread>
 #include <mutex>

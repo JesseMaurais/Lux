@@ -15,14 +15,19 @@
  * on the stack. The one caveat is that Lua will not call the destructor for
  * your C++ class unless you set it up in the __gc metatable method. If this
  * is not done, any resources that your class has will not be freed, so that
- * your program might get memory leaks. However, this problem does not occur
- * if your class does not allocate resources (memory) which is the case with
- * ordinary C structs and unions. 
+ * your program might have memory leaks. This problem does not occur if your
+ * class does not allocate resources (like memory) which is the typical case
+ * with ordinary C structs and unions. Classes and structs without a default
+ * destructor are not necessarily safe, since their member's destructors are
+ * called at this same time, but are not when the parent is not. Either your
+ * code sets the __gc metamethod to call the destructor or you only allocate
+ * POD types with this 'new' overload. Lux storage classes always define the
+ * __gc metamethod in this way. 
  */
 
 #include "lua.hpp"
 
-// Specialisation for memory allocation with class constructor calls
+// Pretty simple for so useful a tool with such heavy caveats
 
 inline void *operator new (size_t size, lua_State *state)
 {

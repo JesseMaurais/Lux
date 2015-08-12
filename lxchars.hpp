@@ -4,14 +4,14 @@
 /**
  * Support for the Unicode Transformation Format (UTF) which is used to encode
  * and decode strings from the Universal Character Set (UCS), the standard way
- * store and transmit text in various languages. Information on Unicode can be
- * found easily on the internet. 
+ * to store and transmit text in various languages. Information on Unicode can
+ * be found easily on the internet. 
  *
  * Noteworthy here is that we are using the C11 functions for coding the multi
  * byte sequence because many C++11 compilers are not equiped with the headers
- * which contain the appropriate classes. This the current state of G++ 
+ * which contain the appropriate classes. This is the current state of G++ 
  *
- * Unconventionally we are storing the code points in arbitrary arrays, rather
+ * Unconventionally, we are storing the code points in arbitrary arrays rather
  * than just those of char, char16_t and char32_t. Saftey is assured by checks
  * on the bit width of the base type and by defaulting to a copying loop where
  * the type is not a perfect match. 
