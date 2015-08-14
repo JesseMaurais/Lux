@@ -271,6 +271,9 @@ int lux_to<int>(lua_State *state, int stack)
 template <> inline
 char lux_to<char>(lua_State *state, int stack)
 {
+	if (lua_isstring(state, stack))
+	return *lua_tostring(state, stack);
+	else
 	return lua_tointeger(state, stack);
 }
 template <> inline
@@ -324,6 +327,9 @@ unsigned int lux_to<unsigned int>(lua_State *state, int stack)
 template <> inline
 unsigned char lux_to<unsigned char>(lua_State *state, int stack)
 {
+	if (lua_isstring(state, stack))
+	return *lua_tostring(state, stack);
+	else
 	return lua_tointeger(state, stack);
 }
 template <> inline

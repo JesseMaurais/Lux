@@ -691,6 +691,36 @@ template <class User> struct lux_Array
 		return 0;
 	}
 
+	/// Create array from arguments
+	static int pack(lua_State *state)
+	{
+		int size = lua_gettop(state);
+		User *data = new User [size];
+		for (int item = 0; item < size; ++item)
+		{
+			data[item] = lux_to<User>(state, item+1);
+		}
+		Type::push(state, data, size);
+		return 1;
+	}
+
+	/// Push all elements onto stack
+	static int unpack(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		int from = luaL_optinteger(state, 2, 1);
+		lux_argcheck(state, 2, 0 < from);
+		int end = luaL_optinteger(state, 3, size);
+		lux_argcheck(state, 3, end <= size);
+		for (int item = --from; item < end; ++item)
+		{
+			lux_push(state, user->data[item]);
+		}
+		return (end - from);
+	}
+
 	/// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
@@ -701,6 +731,8 @@ template <class User> struct lux_Array
 		{
 			luaL_Reg regs [] =
 			{
+			{"pack", pack},
+			{"unpack", unpack},
 			{"sort", sort},
 			{"search", search},
 			{"write", write},

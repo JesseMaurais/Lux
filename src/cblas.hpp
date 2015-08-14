@@ -13,17 +13,6 @@ extern "C"
 #endif
 
 /*
- * Enumerated and derived types
- */
-#define CBLAS_INDEX size_t  /* this may vary between platforms */
-
-enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
-enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
-enum CBLAS_UPLO {CblasUpper=121, CblasLower=122};
-enum CBLAS_DIAG {CblasNonUnit=131, CblasUnit=132};
-enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
-
-/*
  * ===========================================================================
  * Prototypes for level 1 BLAS functions (complex are recast as routines)
  * ===========================================================================
@@ -70,10 +59,10 @@ double cblas_dzasum(const int N, const complex<double> *X, const int incX);
 /*
  * Functions having standard 4 prefixes (S D C Z)
  */
-CBLAS_INDEX cblas_isamax(const int N, const float  *X, const int incX);
-CBLAS_INDEX cblas_idamax(const int N, const double *X, const int incX);
-CBLAS_INDEX cblas_icamax(const int N, const complex<float> *X, const int incX);
-CBLAS_INDEX cblas_izamax(const int N, const complex<double> *X, const int incX);
+size_t cblas_isamax(const int N, const float  *X, const int incX);
+size_t cblas_idamax(const int N, const double *X, const int incX);
+size_t cblas_icamax(const int N, const complex<float> *X, const int incX);
+size_t cblas_izamax(const int N, const complex<double> *X, const int incX);
 
 /*
  * ===========================================================================
@@ -150,197 +139,197 @@ void cblas_zdscal(const int N, const double alpha, complex<double> *X, const int
 /* 
  * Routines with standard 4 prefixes (S, D, C, Z)
  */
-void cblas_sgemv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_sgemv(const char order,
+                 const char TransA, const int M, const int N,
                  const float alpha, const float *A, const int lda,
                  const float *X, const int incX, const float beta,
                  float *Y, const int incY);
-void cblas_sgbmv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_sgbmv(const char order,
+                 const char TransA, const int M, const int N,
                  const int KL, const int KU, const float alpha,
                  const float *A, const int lda, const float *X,
                  const int incX, const float beta, float *Y, const int incY);
-void cblas_strmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_strmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const float *A, const int lda, 
                  float *X, const int incX);
-void cblas_stbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_stbmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const float *A, const int lda, 
                  float *X, const int incX);
-void cblas_stpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_stpmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const float *Ap, float *X, const int incX);
-void cblas_strsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_strsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const float *A, const int lda, float *X,
                  const int incX);
-void cblas_stbsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_stbsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const float *A, const int lda,
                  float *X, const int incX);
-void cblas_stpsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_stpsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const float *Ap, float *X, const int incX);
 
-void cblas_dgemv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_dgemv(const char order,
+                 const char TransA, const int M, const int N,
                  const double alpha, const double *A, const int lda,
                  const double *X, const int incX, const double beta,
                  double *Y, const int incY);
-void cblas_dgbmv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_dgbmv(const char order,
+                 const char TransA, const int M, const int N,
                  const int KL, const int KU, const double alpha,
                  const double *A, const int lda, const double *X,
                  const int incX, const double beta, double *Y, const int incY);
-void cblas_dtrmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtrmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const double *A, const int lda, 
                  double *X, const int incX);
-void cblas_dtbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtbmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const double *A, const int lda, 
                  double *X, const int incX);
-void cblas_dtpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtpmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const double *Ap, double *X, const int incX);
-void cblas_dtrsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtrsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const double *A, const int lda, double *X,
                  const int incX);
-void cblas_dtbsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtbsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const double *A, const int lda,
                  double *X, const int incX);
-void cblas_dtpsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_dtpsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const double *Ap, double *X, const int incX);
 
-void cblas_cgemv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_cgemv(const char order,
+                 const char TransA, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  const complex<float> *X, const int incX, const complex<float> *beta,
                  float *Y, const int incY);
-void cblas_cgbmv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_cgbmv(const char order,
+                 const char TransA, const int M, const int N,
                  const int KL, const int KU, const complex<float> *alpha,
                  const complex<float> *A, const int lda, const complex<float> *X,
                  const int incX, const complex<float> *beta, complex<float> *Y, const int incY);
-void cblas_ctrmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctrmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<float> *A, const int lda, 
                  complex<float> *X, const int incX);
-void cblas_ctbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctbmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const complex<float> *A, const int lda, 
                  complex<float> *X, const int incX);
-void cblas_ctpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctpmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<float> *Ap, complex<float> *X, const int incX);
-void cblas_ctrsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctrsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<float> *A, const int lda, complex<float> *X,
                  const int incX);
-void cblas_ctbsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctbsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const complex<float> *A, const int lda,
                  complex<float> *X, const int incX);
-void cblas_ctpsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ctpsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<float> *Ap, complex<float> *X, const int incX);
 
-void cblas_zgemv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_zgemv(const char order,
+                 const char TransA, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  const complex<double> *X, const int incX, const complex<double> *beta,
                  complex<double> *Y, const int incY);
-void cblas_zgbmv(const enum CBLAS_ORDER order,
-                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+void cblas_zgbmv(const char order,
+                 const char TransA, const int M, const int N,
                  const int KL, const int KU, const complex<double> *alpha,
                  const complex<double> *A, const int lda, const complex<double> *X,
                  const int incX, const complex<double> *beta, complex<double> *Y, const int incY);
-void cblas_ztrmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztrmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<double> *A, const int lda, 
                  complex<double> *X, const int incX);
-void cblas_ztbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztbmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const complex<double> *A, const int lda, 
                  complex<double> *X, const int incX);
-void cblas_ztpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztpmv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<double> *Ap, complex<double> *X, const int incX);
-void cblas_ztrsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztrsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<double> *A, const int lda, complex<double> *X,
                  const int incX);
-void cblas_ztbsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztbsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const int K, const complex<double> *A, const int lda,
                  complex<double> *X, const int incX);
-void cblas_ztpsv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_DIAG Diag,
+void cblas_ztpsv(const char order, const char Uplo,
+                 const char TransA, const char Diag,
                  const int N, const complex<double> *Ap, complex<double> *X, const int incX);
 
 
 /* 
  * Routines with S and D prefixes only
  */
-void cblas_ssymv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_ssymv(const char order, const char Uplo,
                  const int N, const float alpha, const float *A,
                  const int lda, const float *X, const int incX,
                  const float beta, float *Y, const int incY);
-void cblas_ssbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_ssbmv(const char order, const char Uplo,
                  const int N, const int K, const float alpha, const float *A,
                  const int lda, const float *X, const int incX,
                  const float beta, float *Y, const int incY);
-void cblas_sspmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_sspmv(const char order, const char Uplo,
                  const int N, const float alpha, const float *Ap,
                  const float *X, const int incX,
                  const float beta, float *Y, const int incY);
-void cblas_sger(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_sger(const char order, const int M, const int N,
                 const float alpha, const float *X, const int incX,
                 const float *Y, const int incY, float *A, const int lda);
-void cblas_ssyr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_ssyr(const char order, const char Uplo,
                 const int N, const float alpha, const float *X,
                 const int incX, float *A, const int lda);
-void cblas_sspr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_sspr(const char order, const char Uplo,
                 const int N, const float alpha, const float *X,
                 const int incX, float *Ap);
-void cblas_ssyr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_ssyr2(const char order, const char Uplo,
                 const int N, const float alpha, const float *X,
                 const int incX, const float *Y, const int incY, float *A,
                 const int lda);
-void cblas_sspr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_sspr2(const char order, const char Uplo,
                 const int N, const float alpha, const float *X,
                 const int incX, const float *Y, const int incY, float *A);
 
-void cblas_dsymv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dsymv(const char order, const char Uplo,
                  const int N, const double alpha, const double *A,
                  const int lda, const double *X, const int incX,
                  const double beta, double *Y, const int incY);
-void cblas_dsbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dsbmv(const char order, const char Uplo,
                  const int N, const int K, const double alpha, const double *A,
                  const int lda, const double *X, const int incX,
                  const double beta, double *Y, const int incY);
-void cblas_dspmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dspmv(const char order, const char Uplo,
                  const int N, const double alpha, const double *Ap,
                  const double *X, const int incX,
                  const double beta, double *Y, const int incY);
-void cblas_dger(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_dger(const char order, const int M, const int N,
                 const double alpha, const double *X, const int incX,
                 const double *Y, const int incY, double *A, const int lda);
-void cblas_dsyr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dsyr(const char order, const char Uplo,
                 const int N, const double alpha, const double *X,
                 const int incX, double *A, const int lda);
-void cblas_dspr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dspr(const char order, const char Uplo,
                 const int N, const double alpha, const double *X,
                 const int incX, double *Ap);
-void cblas_dsyr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dsyr2(const char order, const char Uplo,
                 const int N, const double alpha, const double *X,
                 const int incX, const double *Y, const int incY, double *A,
                 const int lda);
-void cblas_dspr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_dspr2(const char order, const char Uplo,
                 const int N, const double alpha, const double *X,
                 const int incX, const double *Y, const int incY, double *A);
 
@@ -348,65 +337,65 @@ void cblas_dspr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
 /* 
  * Routines with C and Z prefixes only
  */
-void cblas_chemv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_chemv(const char order, const char Uplo,
                  const int N, const complex<float> *alpha, const complex<float> *A,
                  const int lda, const complex<float> *X, const int incX,
                  const complex<float> *beta, complex<float> *Y, const int incY);
-void cblas_chbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_chbmv(const char order, const char Uplo,
                  const int N, const int K, const complex<float> *alpha, const complex<float> *A,
                  const int lda, const complex<float> *X, const int incX,
                  const complex<float> *beta, complex<float> *Y, const int incY);
-void cblas_chpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_chpmv(const char order, const char Uplo,
                  const int N, const complex<float> *alpha, const complex<float> *Ap,
                  const complex<float> *X, const int incX,
                  const complex<float> *beta, complex<float> *Y, const int incY);
-void cblas_cgeru(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_cgeru(const char order, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *X, const int incX,
                  const complex<float> *Y, const int incY, complex<float> *A, const int lda);
-void cblas_cgerc(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_cgerc(const char order, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *X, const int incX,
                  const complex<float> *Y, const int incY, complex<float> *A, const int lda);
-void cblas_cher(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_cher(const char order, const char Uplo,
                 const int N, const float alpha, const complex<float> *X, const int incX,
                 complex<float> *A, const int lda);
-void cblas_chpr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_chpr(const char order, const char Uplo,
                 const int N, const float alpha, const complex<float> *X,
                 const int incX, float *A);
-void cblas_cher2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo, const int N,
+void cblas_cher2(const char order, const char Uplo, const int N,
                 const complex<float> *alpha, const complex<float> *X, const int incX,
                 const complex<float> *Y, const int incY, complex<float> *A, const int lda);
-void cblas_chpr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo, const int N,
+void cblas_chpr2(const char order, const char Uplo, const int N,
                 const complex<float> *alpha, const complex<float> *X, const int incX,
                 const complex<float> *Y, const int incY, complex<float> *Ap);
 
-void cblas_zhemv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_zhemv(const char order, const char Uplo,
                  const int N, const complex<double> *alpha, const complex<double> *A,
                  const int lda, const complex<double> *X, const int incX,
                  const complex<double> *beta, complex<double> *Y, const int incY);
-void cblas_zhbmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_zhbmv(const char order, const char Uplo,
                  const int N, const int K, const complex<double> *alpha, const complex<double> *A,
                  const int lda, const complex<double> *X, const int incX,
                  const complex<double> *beta, complex<double> *Y, const int incY);
-void cblas_zhpmv(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_zhpmv(const char order, const char Uplo,
                  const int N, const complex<double> *alpha, const complex<double> *Ap,
                  const complex<double> *X, const int incX,
                  const complex<double> *beta, complex<double> *Y, const int incY);
-void cblas_zgeru(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_zgeru(const char order, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *X, const int incX,
                  const complex<double> *Y, const int incY, complex<double> *A, const int lda);
-void cblas_zgerc(const enum CBLAS_ORDER order, const int M, const int N,
+void cblas_zgerc(const char order, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *X, const int incX,
                  const complex<double> *Y, const int incY, complex<double> *A, const int lda);
-void cblas_zher(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_zher(const char order, const char Uplo,
                 const int N, const double alpha, const complex<double> *X, const int incX,
                 complex<double> *A, const int lda);
-void cblas_zhpr(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo,
+void cblas_zhpr(const char order, const char Uplo,
                 const int N, const double alpha, const complex<double> *X,
                 const int incX, complex<double> *A);
-void cblas_zher2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo, const int N,
+void cblas_zher2(const char order, const char Uplo, const int N,
                 const complex<double> *alpha, const complex<double> *X, const int incX,
                 const complex<double> *Y, const int incY, float *A, const int lda);
-void cblas_zhpr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo, const int N,
+void cblas_zhpr2(const char order, const char Uplo, const int N,
                 const complex<double> *alpha, const complex<double> *X, const int incX,
                 const complex<double> *Y, const int incY, complex<double> *Ap);
 
@@ -419,123 +408,123 @@ void cblas_zhpr2(const enum CBLAS_ORDER order, const enum CBLAS_UPLO Uplo, const
 /* 
  * Routines with standard 4 prefixes (S, D, C, Z)
  */
-void cblas_sgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+void cblas_sgemm(const char Order, const char TransA,
+                 const char TransB, const int M, const int N,
                  const int K, const float alpha, const float *A,
                  const int lda, const float *B, const int ldb,
                  const float beta, float *C, const int ldc);
-void cblas_ssymm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_ssymm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const float alpha, const float *A, const int lda,
                  const float *B, const int ldb, const float beta,
                  float *C, const int ldc);
-void cblas_ssyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_ssyrk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const float alpha, const float *A, const int lda,
                  const float beta, float *C, const int ldc);
-void cblas_ssyr2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_ssyr2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const float alpha, const float *A, const int lda,
                   const float *B, const int ldb, const float beta,
                   float *C, const int ldc);
-void cblas_strmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_strmm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const float alpha, const float *A, const int lda,
                  float *B, const int ldb);
-void cblas_strsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_strsm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const float alpha, const float *A, const int lda,
                  float *B, const int ldb);
 
-void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+void cblas_dgemm(const char Order, const char TransA,
+                 const char TransB, const int M, const int N,
                  const int K, const double alpha, const double *A,
                  const int lda, const double *B, const int ldb,
                  const double beta, double *C, const int ldc);
-void cblas_dsymm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_dsymm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const double alpha, const double *A, const int lda,
                  const double *B, const int ldb, const double beta,
                  double *C, const int ldc);
-void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_dsyrk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const double alpha, const double *A, const int lda,
                  const double beta, double *C, const int ldc);
-void cblas_dsyr2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_dsyr2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const double alpha, const double *A, const int lda,
                   const double *B, const int ldb, const double beta,
                   double *C, const int ldc);
-void cblas_dtrmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_dtrmm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const double alpha, const double *A, const int lda,
                  double *B, const int ldb);
-void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_dtrsm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const double alpha, const double *A, const int lda,
                  double *B, const int ldb);
 
-void cblas_cgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+void cblas_cgemm(const char Order, const char TransA,
+                 const char TransB, const int M, const int N,
                  const int K, const complex<float> *alpha, const float *A,
                  const int lda, const complex<float> *B, const int ldb,
                  const complex<float> *beta, complex<float> *C, const int ldc);
-void cblas_csymm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_csymm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  const complex<float> *B, const int ldb, const complex<float> *beta,
                  complex<float> *C, const int ldc);
-void cblas_csyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_csyrk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  const complex<float> *beta, complex<float> *C, const int ldc);
-void cblas_csyr2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_csyr2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const complex<float> *alpha, const complex<float> *A, const int lda,
                   const complex<float> *B, const int ldb, const complex<float> *beta,
                   complex<float> *C, const int ldc);
-void cblas_ctrmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_ctrmm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  complex<float> *B, const int ldb);
-void cblas_ctrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_ctrsm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  complex<float> *B, const int ldb);
 
-void cblas_zgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+void cblas_zgemm(const char Order, const char TransA,
+                 const char TransB, const int M, const int N,
                  const int K, const complex<double> *alpha, const complex<double> *A,
                  const int lda, const complex<double> *B, const int ldb,
                  const complex<double> *beta, complex<double> *C, const int ldc);
-void cblas_zsymm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_zsymm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  const complex<double> *B, const int ldb, const complex<double> *beta,
                  complex<double> *C, const int ldc);
-void cblas_zsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_zsyrk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  const complex<double> *beta, complex<double> *C, const int ldc);
-void cblas_zsyr2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_zsyr2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const complex<double> *alpha, const complex<double> *A, const int lda,
                   const complex<double> *B, const int ldb, const complex<double> *beta,
                   complex<double> *C, const int ldc);
-void cblas_ztrmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_ztrmm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  complex<double> *B, const int ldb);
-void cblas_ztrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
+void cblas_ztrsm(const char Order, const char Side,
+                 const char Uplo, const char TransA,
+                 const char Diag, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  complex<double> *B, const int ldb);
 
@@ -543,32 +532,32 @@ void cblas_ztrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
 /* 
  * Routines with prefixes C and Z only
  */
-void cblas_chemm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_chemm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  const complex<float> *B, const int ldb, const complex<float> *beta,
                  complex<float> *C, const int ldc);
-void cblas_cherk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_cherk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const float alpha, const complex<float> *A, const int lda,
                  const float beta, complex<float> *C, const int ldc);
-void cblas_cher2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_cher2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const complex<float> *alpha, const complex<float> *A, const int lda,
                   const complex<float> *B, const int ldb, const float beta,
                   complex<float> *C, const int ldc);
 
-void cblas_zhemm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const int M, const int N,
+void cblas_zhemm(const char Order, const char Side,
+                 const char Uplo, const int M, const int N,
                  const complex<double> *alpha, const complex<double> *A, const int lda,
                  const complex<double> *B, const int ldb, const complex<double> *beta,
                  complex<double> *C, const int ldc);
-void cblas_zherk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_zherk(const char Order, const char Uplo,
+                 const char Trans, const int N, const int K,
                  const double alpha, const complex<double> *A, const int lda,
                  const double beta, complex<double> *C, const int ldc);
-void cblas_zher2k(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+void cblas_zher2k(const char Order, const char Uplo,
+                  const char Trans, const int N, const int K,
                   const complex<double> *alpha, const complex<double> *A, const int lda,
                   const complex<double> *B, const int ldb, const double beta,
                   complex<double> *C, const int ldc);
