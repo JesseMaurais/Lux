@@ -5,7 +5,12 @@
  * Mimics some of the features of arrays but intended to store arrays of C++
  * objects like class/struct/union rather than POD types. Supports access to
  * fields within the objects (their members) as well as class methods in the
- * metatable.
+ * metatable. However, it does not support any of the manipulation functions
+ * for arrays (sorting, rotating, etc). It is a very minimal interface which
+ * allows for access to C++ data structures and classes that are mapped into
+ * contiguous areas of system memory, for the purpose of interacting with an
+ * extant object system, or to communicate well with C functions that accept
+ * pointers to such memory in their arguments.
  */
 
 #include "lxalloc.hpp"

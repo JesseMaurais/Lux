@@ -3,7 +3,7 @@
  * distributions. This implementation is based on the C++11 standard additions
  * found in the 'random' header. The interface to Lua is fully generic in that
  * it can write the output numbers either to an array, a table or any userdata
- * that has a __newindex metamethod. It also has support for all pseudo-random
+ * that has a __newindex metamethod. It also has support for all pseudo random
  * engines defined in the standard, as well as the true random number device.
  */
 
