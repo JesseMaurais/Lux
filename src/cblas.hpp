@@ -209,7 +209,7 @@ void cblas_cgemv(const char order,
                  const char TransA, const int M, const int N,
                  const complex<float> *alpha, const complex<float> *A, const int lda,
                  const complex<float> *X, const int incX, const complex<float> *beta,
-                 float *Y, const int incY);
+                 complex<float> *Y, const int incY);
 void cblas_cgbmv(const char order,
                  const char TransA, const int M, const int N,
                  const int KL, const int KU, const complex<float> *alpha,
@@ -360,7 +360,7 @@ void cblas_cher(const char order, const char Uplo,
                 complex<float> *A, const int lda);
 void cblas_chpr(const char order, const char Uplo,
                 const int N, const float alpha, const complex<float> *X,
-                const int incX, float *A);
+                const int incX, complex<float> *A);
 void cblas_cher2(const char order, const char Uplo, const int N,
                 const complex<float> *alpha, const complex<float> *X, const int incX,
                 const complex<float> *Y, const int incY, complex<float> *A, const int lda);
@@ -394,7 +394,7 @@ void cblas_zhpr(const char order, const char Uplo,
                 const int incX, complex<double> *A);
 void cblas_zher2(const char order, const char Uplo, const int N,
                 const complex<double> *alpha, const complex<double> *X, const int incX,
-                const complex<double> *Y, const int incY, float *A, const int lda);
+                const complex<double> *Y, const int incY, complex<double> *A, const int lda);
 void cblas_zhpr2(const char order, const char Uplo, const int N,
                 const complex<double> *alpha, const complex<double> *X, const int incX,
                 const complex<double> *Y, const int incY, complex<double> *Ap);
@@ -470,7 +470,7 @@ void cblas_dtrsm(const char Order, const char Side,
 
 void cblas_cgemm(const char Order, const char TransA,
                  const char TransB, const int M, const int N,
-                 const int K, const complex<float> *alpha, const float *A,
+                 const int K, const complex<float> *alpha, const complex<float> *A,
                  const int lda, const complex<float> *B, const int ldb,
                  const complex<float> *beta, complex<float> *C, const int ldc);
 void cblas_csymm(const char Order, const char Side,
