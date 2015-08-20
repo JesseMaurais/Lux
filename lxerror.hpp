@@ -30,9 +30,9 @@
 #include <cerrno>
 
 /// Imitate the behavior of perror in a given state
-static inline int lux_perror(lua_State *state)
+static inline int lux_perror(lua_State *state, int error = errno)
 {
-	return luaL_error(state, "%s", strerror(errno));
+	return luaL_error(state, "%s", strerror(error));
 }
 
 /// Report an errno string as coming from a function argument

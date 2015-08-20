@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-std=c++11
 SRC=lux.hpp lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxerror.hpp lxtools.hpp
-OBJ=array.so complex.so cblas.so lapacke.so random.so thread.so csignal.so cstdlib.so cstdio.so clocale.so cfenv.so unistd.so 
+OBJ=array.so complex.so cblas.so lapacke.so random.so pthread.so csignal.so cstdlib.so cstdio.so clocale.so cfenv.so unistd.so 
 
 all: $(OBJ)
 
@@ -25,6 +25,6 @@ cblas.so: src/cblas.cpp src/cblas.hpp $(SRC)
 lapacke.so: src/lapacke.cpp src/lapacke.hpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llapacke
 
-thread.so: src/thread.cpp $(SRC)
+pthread.so: src/pthread.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -pthread
 
