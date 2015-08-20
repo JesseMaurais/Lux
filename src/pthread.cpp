@@ -15,7 +15,7 @@ static void *start(void *stack)
 	pthread_exit(nullptr);
 }
 
-// Create and start a function thread
+// Create and start a new thread
 static int create(lua_State *state)
 {
 	pthread_t thread;
@@ -161,7 +161,7 @@ typedef lux_Store<pthread_attr_t> pthread_attr; // Storage class for Lux
 
 
 // Initialize a thread attributes type
-static int attr_new(lua_State *state)
+static int attr_init(lua_State *state)
 {
 	auto attr = new (state) pthread_attr;
 	luaL_setmetatable(state, pthread_attr::name);
@@ -391,15 +391,187 @@ static int getstacksize(lua_State *state)
 }
 
 
+typedef lux_Store<pthread_mutexattr_t> pthread_mutexattr; // Storage class
+
+
+// Create mutex attributes object
+static int mutexattr_init(lua_State *state)
+{
+	auto attr = new (state) pthread_mutexattr;
+	luaL_setmetatable(state, pthread_mutexattr::name);
+	int error = pthread_mutexattr_init(&attr->data);
+	if (error) return lux_perror(state, error);
+	return 1;
+}
+
+// Destroy mutexattr on collection
+static int mutexattr_gc(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int error = pthread_mutexattr_destroy(&attr);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Convert to string for printing
+static int mutexattr_tostring(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	lua_pushfstring(state, "%s: %p", pthread_mutexattr::name, &attr);
+	return 1;
+}
+
+// Set the priority attributes for mutexes
+static int setprioceiling(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int prio = lua_tointeger(state, 1);
+	int error = pthread_mutexattr_setprioceiling(&attr, prio);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Get the priority attribute for mutexes
+static int getprioceiling(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int prio, error = pthread_mutexattr_getprioceiling(&attr, &prio);
+	if (error) return lux_perror(state, error);
+	lua_pushinteger(state, prio);
+	return 1;
+}
+
+// Set the protocol attribute for mutexes
+static int setprotocol(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	// Single argument must be one of these strings
+	const char *opts[] = {"none", "inherit", "protect", nullptr};
+	int opt = luaL_checkoption(state, 2, *opts, opts);
+	// Convert the option to these POSIX constants
+	switch (opt)
+	{
+	case 0: opt = PTHREAD_PRIO_NONE;
+		break;
+	case 1: opt = PTHREAD_PRIO_INHERIT;
+		break;
+	case 2: opt = PTHREAD_PRIO_PROTECT;
+		break;
+	}
+	int error = pthread_mutexattr_setprotocol(&attr, opt);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Get the protocol attribute for mutexes
+static int getprotocol(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int opt, error = pthread_mutexattr_getprotocol(&attr, &opt);
+	if (error) lux_perror(state, error);
+	switch (opt) // Convert to string
+	{
+	case PTHREAD_PRIO_NONE:
+		lua_pushliteral(state, "none");
+		break;
+	case PTHREAD_PRIO_INHERIT:
+		lua_pushliteral(state, "inherit");
+		break;
+	case PTHREAD_PRIO_PROTECT:
+		lua_pushliteral(state, "protect");
+		break;
+	}
+	return 1;
+}
+
+// Set the sharing attribute for mutexes
+static int setpshared(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	// Single argument must be one of these strings
+	const char *opts[] = {"shared", "private", nullptr};
+	int opt = luaL_checkoption(state, 2, *opts, opts);
+	// Convert the option to one of these POSIX constants
+	opt = opt ? PTHREAD_PROCESS_PRIVATE : PTHREAD_PROCESS_SHARED;
+	int error = pthread_mutexattr_setpshared(&attr, opt);
+	if (error) return lux_perror(state, error);
+	lua_pushinteger(state, opt);
+	return 1; 
+}
+
+// Get the sharing attribute for mutexes
+static int getpshared(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int opt, error = pthread_mutexattr_getpshared(&attr, &opt);
+	if (error) return lux_perror(state, error);
+	switch (opt)
+	{
+	case PTHREAD_PROCESS_SHARED:
+		lua_pushliteral(state, "shared");
+		break;
+	case PTHREAD_PROCESS_PRIVATE:
+		lua_pushliteral(state, "private");
+		break;
+	}
+	return 1;
+}
+
+// Set the type of mutex to create
+static int settype(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	// Single argument must be one of these strings
+	const char *opts[] = {"default", "recursive", "errorcheck", nullptr};
+	int opt = luaL_checkoption(state, 2, *opts, opts);
+	// Conver the option to one of these POSIX constants
+	switch (opt)
+	{
+	case 0: opt = PTHREAD_MUTEX_DEFAULT;
+		break;
+	case 1: opt = PTHREAD_MUTEX_RECURSIVE;
+		break;
+	case 2: opt = PTHREAD_MUTEX_ERRORCHECK;
+		break;
+	}
+	int error = pthread_mutexattr_settype(&attr, opt);
+	if (error) lux_perror(state, error);
+	return 0;
+}
+
+// Get the type of mutex to create
+static int gettype(lua_State *state)
+{
+	auto attr = pthread_mutexattr::to(state, 1);
+	int opt, error = pthread_mutexattr_gettype(&attr, &opt);
+	if (error) lux_perror(state, error);
+	switch (opt) // Conver to string
+	{
+	case PTHREAD_MUTEX_DEFAULT:
+		lua_pushliteral(state, "default");
+		break;
+	case PTHREAD_MUTEX_RECURSIVE:
+		lua_pushliteral(state, "recursive");
+		break;
+	case PTHREAD_MUTEX_ERRORCHECK:
+		lua_pushliteral(state, "errorcheck");
+		break;
+	}
+	return 1;
+}
+
+
 typedef lux_Store<pthread_mutex_t> pthread_mutex; // Storage class for Lux
 
 
 // Create a mutual exclusion object
-static int mutex_new(lua_State *state)
+static int mutex_init(lua_State *state)
 {
+	auto mutexattr = pthread_mutexattr::test(state, 1);
+	auto attr = mutexattr ? &mutexattr->data : nullptr;
 	auto mutex = new (state) pthread_mutex;
 	luaL_setmetatable(state, pthread_mutex::name);
-	int error = pthread_mutex_init(&mutex->data, nullptr);
+	int error = pthread_mutex_init(&mutex->data, attr);
 	if (error) lux_perror(state, error);
 	return 1;
 }
@@ -456,26 +628,28 @@ static int mutex_lock(lua_State *state)
 	return 0;
 }
 
-// Set the mutex's priority ceiling
-static int setprioceiling(lua_State *state)
+// Set the priority attributes for mutexes
+static int mutex_setprioceiling(lua_State *state)
 {
-	auto mutex = pthread_mutex::to(state, 1);
+	auto attr = pthread_mutex::to(state, 1);
 	int prio = lua_tointeger(state, 1);
-	int error = pthread_mutex_setprioceiling(&mutex, prio, &prio);
+	int error = pthread_mutex_setprioceiling(&attr, prio, &prio);
 	if (error) return lux_perror(state, error);
 	lua_pushinteger(state, prio);
 	return 1;
 }
 
-// Get the mutex's priority ceiling
-static int getprioceiling(lua_State *state)
+// Get the priority attribute for mutexes
+static int mutex_getprioceiling(lua_State *state)
 {
-	auto mutex = pthread_mutex::to(state, 1);
-	int prio, error = pthread_mutex_getprioceiling(&mutex, &prio);
+	auto attr = pthread_mutex::to(state, 1);
+	int prio, error = pthread_mutex_getprioceiling(&attr, &prio);
 	if (error) return lux_perror(state, error);
 	lua_pushinteger(state, prio);
 	return 1;
 }
+
+
 
 // Main waits on threads
 static void onexit(void)
@@ -514,7 +688,7 @@ extern "C" int luaopen_pthread(lua_State *state)
 	luaL_newmetatable(state, pthread_attr::name);
 	luaL_Reg attr[] =
 	{
-	{"new", attr_new},
+	{"init", attr_init},
 	{"__tostring", attr_tostring},
 	{"__gc", attr_gc},
 	{nullptr}
@@ -548,7 +722,7 @@ extern "C" int luaopen_pthread(lua_State *state)
 	luaL_newmetatable(state, pthread_mutex::name);
 	luaL_Reg mutex_regs[] =
 	{
-	{"new", mutex_new},
+	{"init", mutex_init},
 	{"__tostring", mutex_tostring},
 	{"__gc", mutex_gc},
 	{nullptr}
@@ -556,8 +730,8 @@ extern "C" int luaopen_pthread(lua_State *state)
 	luaL_setfuncs(state, mutex_regs, 0);
 	luaL_Reg mutex_index[] =
 	{
-	{"setprioceiling", setprioceiling},
-	{"getprioceiling", getprioceiling},
+	{"setprioceiling", mutex_setprioceiling},
+	{"getprioceiling", mutex_getprioceiling},
 	{"trylock", mutex_trylock},
 	{"unlock", mutex_unlock},
 	{"lock", mutex_lock},
@@ -566,6 +740,33 @@ extern "C" int luaopen_pthread(lua_State *state)
 	luaL_newlib(state, mutex_index);
 	lua_setfield(state, -2, "__index");
 	lua_setfield(state, -2, "mutex");
+
+	// pthread_mutexattr
+
+	luaL_newmetatable(state, pthread_mutexattr::name);
+	luaL_Reg mutexattr_regs[] =
+	{
+	{"init", mutexattr_init},
+	{"__tostring", mutexattr_tostring},
+	{"__gc", mutexattr_gc},
+	{nullptr}
+	};
+	luaL_setfuncs(state, mutexattr_regs, 0);
+	luaL_Reg mutexattr_index[] =
+	{
+	{"getprioceiling", getprioceiling},
+	{"setprioceiling", setprioceiling},
+	{"setprotocol", setprotocol},
+	{"getprotocol", getprotocol},
+	{"getpshared", getpshared},
+	{"setpshared", setpshared},
+	{"settype", settype},
+	{"gettype", gettype},
+	{nullptr}
+	};
+	luaL_newlib(state, mutexattr_index);
+	lua_setfield(state, -2, "__index");
+	lua_setfield(state, -2, "mutexattr");
 
 	
 	return 1; // pthread table
