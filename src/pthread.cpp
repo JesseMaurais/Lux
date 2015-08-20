@@ -156,6 +156,37 @@ static int setschedprio(lua_State *state)
 	return 0;
 }
 
+/*
+// Cleanup routine for a thread
+static void routine(void *stack)
+{
+	lua_State *state = (lua_State*) stack;
+	// Assume there is a function and arguments on it
+	lua_call(state, lua_gettop(state) - 1, LUA_MULTRET);
+}
+
+// Register a cleanup function for a thread
+static int cleanup_push(lua_State *state)
+{
+	// Create an independent execution stack
+	lua_State *stack = lua_newthread(state);
+	lua_pop(state, 1);
+	// Move stack contents over to new thread
+	lua_xmove(state, stack, lua_gettop(state));
+	// Set this function to be called later
+	pthread_cleanup_push(routine, stack);
+	return 0;
+}
+
+// Remove last cleanup with optional call
+static int cleanup_pop(lua_State *state)
+{
+	bool execute = lua_toboolean(state, 1);
+	pthread_cleanup_pop(execute);
+	return 0;
+}
+*/
+
 
 typedef lux_Store<pthread_attr_t> pthread_attr; // Storage class for Lux
 
@@ -567,10 +598,10 @@ typedef lux_Store<pthread_mutex_t> pthread_mutex; // Storage class for Lux
 // Create a mutual exclusion object
 static int mutex_init(lua_State *state)
 {
-	auto mutexattr = pthread_mutexattr::test(state, 1);
-	auto attr = mutexattr ? &mutexattr->data : nullptr;
 	auto mutex = new (state) pthread_mutex;
 	luaL_setmetatable(state, pthread_mutex::name);
+	auto mutexattr = pthread_mutexattr::test(state, 1);
+	auto attr = mutexattr ? &mutexattr->data : nullptr;
 	int error = pthread_mutex_init(&mutex->data, attr);
 	if (error) lux_perror(state, error);
 	return 1;
@@ -650,6 +681,270 @@ static int mutex_getprioceiling(lua_State *state)
 }
 
 
+typedef lux_Store<pthread_condattr_t> pthread_condattr; // Storage class
+
+
+// Initialize a condition attribute object
+static int condattr_init(lua_State *state)
+{
+	auto attr = new (state) pthread_condattr;
+	luaL_setmetatable(state, pthread_condattr::name);
+	int error = pthread_condattr_init(&attr->data);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Destroy attributes on garbage collection
+static int condattr_gc(lua_State *state)
+{
+	auto attr = pthread_condattr::to(state, 1);
+	int error = pthread_condattr_destroy(&attr);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Conver to string for printing
+static int condattr_tostring(lua_State *state)
+{
+	auto attr = pthread_condattr::to(state, 1);
+	lua_pushfstring(state, "%s: %p", pthread_condattr::name, &attr);
+	return 1;
+}
+
+// Set sharing attribute of condition variables
+static int condattr_setpshared(lua_State *state)
+{
+	auto attr = pthread_condattr::to(state, 1);
+	// Single argument must be one of these strings
+	const char *opts[] = {"private", "shared", nullptr};
+	int opt = luaL_checkoption(state, 2, *opts, opts);
+	// Conver the option to one of these POSIX constants
+	opt = opt ? PTHREAD_PROCESS_SHARED : PTHREAD_PROCESS_PRIVATE;
+	int error = pthread_condattr_setpshared(&attr, opt);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Get sharing attribute of condition variables
+static int condattr_getpshared(lua_State *state)
+{
+	auto attr = pthread_condattr::to(state, 1);
+	int opt, error = pthread_condattr_getpshared(&attr, &opt);
+	if (error) return lux_perror(state, error);
+	switch (opt) // Convert to string
+	{
+	case PTHREAD_PROCESS_SHARED:
+		lua_pushliteral(state, "shared");
+		break;
+	case PTHREAD_PROCESS_PRIVATE:
+		lua_pushliteral(state, "private");
+		break;
+	}
+	return 1;
+}
+
+
+typedef lux_Store<pthread_cond_t> pthread_cond; // Storage class for Lux
+
+
+// Initialize a condition variable
+static int cond_init(lua_State *state)
+{
+	auto cond = new (state) pthread_cond;
+	luaL_setmetatable(state, pthread_cond::name);
+	auto condattr = pthread_condattr::test(state, 1);
+	auto attr = condattr ? &condattr->data : nullptr;
+	int error = pthread_cond_init(&cond->data, attr);
+	if (error) return lux_perror(state, error);
+	return 1;
+}
+
+// Destroy condition on collection
+static int cond_gc(lua_State *state)
+{
+	auto cond = pthread_cond::to(state, 1);
+	int error = pthread_cond_destroy(&cond);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Convert to string for printing
+static int cond_tostring(lua_State *state)
+{
+	auto cond = pthread_cond::to(state, 1);
+	lua_pushfstring(state, "%s: %p", pthread_cond::name, &cond);
+	return 1;
+}
+
+// Wait for condition on locked mutex
+static int cond_wait(lua_State *state)
+{
+	auto cond = pthread_cond::to(state, 1);
+	auto mutex = pthread_mutex::to(state, 2);
+	int error = pthread_cond_wait(&cond, &mutex);
+	if (error) lux_perror(state, error);
+	return 0;
+}
+
+// Unblock one waiter on this condition
+static int cond_signal(lua_State *state)
+{
+	auto cond = pthread_cond::to(state, 1);
+	int error = pthread_cond_signal(&cond);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Unblock all waiters on this condition
+static int cond_broadcast(lua_State *state)
+{
+	auto cond = pthread_cond::to(state, 1);
+	int error = pthread_cond_broadcast(&cond);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+
+typedef lux_Store<pthread_rwlockattr_t> pthread_rwlockattr; // Storage class
+
+
+// Initialize read/write locker object
+static int rwlockattr_init(lua_State *state)
+{
+	auto attr = new (state) pthread_rwlockattr;
+	luaL_setmetatable(state, pthread_rwlockattr::name);
+	int error = pthread_rwlockattr_init(&attr->data);
+	if (error) return lux_perror(state, error);
+	return 1;
+}
+
+// Destroy attributes on garbage collection
+static int rwlockattr_gc(lua_State *state)
+{
+	auto attr = pthread_rwlockattr::to(state, 1);
+	int error = pthread_rwlockattr_init(&attr);
+	if (error) lux_perror(state, error);
+	return 0;
+}
+
+// Convert to string for printing
+static int rwlockattr_tostring(lua_State *state)
+{
+	auto attr = pthread_rwlockattr::to(state, 1);
+	lua_pushfstring(state, "%s: %p", pthread_rwlockattr::name, &attr);
+	return 1;
+}
+
+// Set sharing attribute of read/write locker
+static int rwlockattr_setpshared(lua_State *state)
+{
+	auto attr = pthread_rwlockattr::to(state, 1);
+	// Single argument must be one of these strings
+	const char *opts[] = {"private", "shared", nullptr};
+	int opt = luaL_checkoption(state, 2, *opts, opts);
+	// Convert the option to one of these POSIX constants
+	opt = opt ? PTHREAD_PROCESS_SHARED : PTHREAD_PROCESS_PRIVATE;
+	int error = pthread_rwlockattr_setpshared(&attr, opt);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Get sharing attribute of read/write locker
+static int rwlockattr_getpshared(lua_State *state)
+{
+	auto attr = pthread_rwlockattr::to(state, 1);
+	int opt, error = pthread_rwlockattr_getpshared(&attr, &opt);
+	if (error) return lux_perror(state, error);
+	switch (opt) // Conver to a string
+	{
+	case PTHREAD_PROCESS_SHARED:
+		lua_pushliteral(state, "shared");
+		break;
+	case PTHREAD_PROCESS_PRIVATE:
+		lua_pushliteral(state, "private");
+		break;
+	}
+	return 1;
+}
+
+
+typedef lux_Store<pthread_rwlock_t> pthread_rwlock; // Storage class for Lux
+
+
+// Initialize a read/write locker object
+static int rwlock_init(lua_State *state)
+{
+	auto rwlock = new (state) pthread_rwlock;
+	luaL_setmetatable(state, pthread_rwlock::name);
+	auto rwlockattr = pthread_rwlockattr::test(state, 1);
+	auto attr = rwlockattr ? &rwlockattr->data : nullptr;
+	int error = pthread_rwlock_init(&rwlock->data, attr);
+	if (error) return lux_perror(state, error);
+	return 1;
+}
+
+// Destroy object on collection
+static int rwlock_gc(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_destroy(&rwlock);
+	if (error) lux_perror(state, error);
+	return 0;
+}
+
+// Convert to string for printing
+static int rwlock_tostring(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	lua_pushfstring(state, "%s: %p", pthread_rwlock::name, &rwlock);
+	return 1;
+}
+
+// Attempt to aquire a reading lock
+static int rwlock_tryrdlock(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_tryrdlock(&rwlock);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Wait to aquire a reading lock
+static int rwlock_rdlock(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_rdlock(&rwlock);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Attempt to aquire a writing lock
+static int rwlock_trywrlock(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_trywrlock(&rwlock);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Wait to aquire a writing lock
+static int rwlock_wrlock(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_wrlock(&rwlock);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
+// Release the lock on this object
+static int rwlock_unlock(lua_State *state)
+{
+	auto rwlock = pthread_rwlock::to(state, 1);
+	int error = pthread_rwlock_unlock(&rwlock);
+	if (error) return lux_perror(state, error);
+	return 0;
+}
+
 
 // Main waits on threads
 static void onexit(void)
@@ -679,6 +974,8 @@ extern "C" int luaopen_pthread(lua_State *state)
 	{"getconcurrency", getconcurrency},
 	{"setconcurrency", setconcurrency},
 	{"setschedprio", setschedprio},
+//	{"cleanup_push", cleanup_push},
+//	{"cleanup_pop", cleanup_pop},
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
@@ -767,6 +1064,94 @@ extern "C" int luaopen_pthread(lua_State *state)
 	luaL_newlib(state, mutexattr_index);
 	lua_setfield(state, -2, "__index");
 	lua_setfield(state, -2, "mutexattr");
+
+	// pthread_cond
+
+	luaL_newmetatable(state, pthread_cond::name);
+	luaL_Reg cond_regs[] =
+	{
+	{"init", cond_init},
+	{"__tostring", cond_tostring},
+	{"__gc", cond_gc},
+	{nullptr}
+	};
+	luaL_setfuncs(state, cond_regs, 0);
+	luaL_Reg cond_index[] =
+	{
+	{"broadcast", cond_broadcast},
+	{"signal", cond_signal},
+	{"wait", cond_wait},
+	{nullptr}
+	};
+	luaL_newlib(state, cond_index);
+	lua_setfield(state, -2, "__index");
+	lua_setfield(state, -2, "cond");
+
+	// pthread_condattr
+
+	luaL_newmetatable(state, pthread_condattr::name);
+	luaL_Reg condattr_regs[] =
+	{
+	{"init", condattr_init},
+	{"__tostring", condattr_tostring},
+	{"__gc", condattr_gc},
+	{nullptr}
+	};
+	luaL_setfuncs(state, condattr_regs, 0);
+	luaL_Reg condattr_index[] =
+	{
+	{"setpshared", condattr_setpshared},
+	{"getpshared", condattr_getpshared},
+	{nullptr}
+	};
+	luaL_newlib(state, condattr_index);
+	lua_setfield(state, -2, "__index");
+	lua_setfield(state, -2, "condattr");
+
+	// pthread_rwlock
+
+	luaL_newmetatable(state, pthread_rwlock::name);
+	luaL_Reg rwlock_regs[] =
+	{
+	{"init", rwlock_init},
+	{"__tostring", rwlock_tostring},
+	{"__gc", rwlock_gc},
+	{nullptr}
+	};
+	luaL_setfuncs(state, rwlock_regs, 0);
+	luaL_Reg rwlock_index[] =
+	{
+	{"tryrdlock", rwlock_tryrdlock},
+	{"trywrlock", rwlock_trywrlock},
+	{"rdlock", rwlock_rdlock},
+	{"wrlock", rwlock_wrlock},
+	{"unlock", rwlock_unlock},
+	{nullptr}
+	};
+	luaL_newlib(state, rwlock_index);
+	lua_setfield(state, -2, "__index");
+	lua_setfield(state, -2, "rwlock");
+
+	// pthread_wrlockattr
+
+	luaL_newmetatable(state, pthread_rwlockattr::name);
+	luaL_Reg rwlockattr_regs[] =
+	{
+	{"init", rwlockattr_init},
+	{"__tostring", rwlockattr_tostring},
+	{"__gc", rwlockattr_gc},
+	{nullptr}
+	};
+	luaL_setfuncs(state, rwlockattr_regs, 0);
+	luaL_Reg rwlockattr_index[] =
+	{
+	{"setpshared", rwlockattr_setpshared},
+	{"getpshared", rwlockattr_getpshared},
+	{nullptr}
+	};
+	luaL_newlib(state, rwlockattr_index);
+	lua_setfield(state, -2, "__index");
+	lua_setfield(state, -2, "rwlockattr");
 
 	
 	return 1; // pthread table
