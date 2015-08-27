@@ -2,6 +2,74 @@
 #include <pthread.h>
 #include <cstdlib>
 
+
+// Storage class for POSIX types
+template <class User> struct Store : lux_Store<User>
+{
+	using Type = lux_Store<User>;
+
+	// Called when module is loaded
+	static int open(lua_State *state)
+	{
+		Type::name = lua_tostring(state, 1);
+		if (luaL_newmetatable(state, Type::name))
+		{
+			lua_pushliteral(state, "init");
+			lua_pushcfunction(state, __new);
+			lua_settable(state, -3);
+
+			lua_pushliteral(state, "__gc");
+			lua_pushcfunction(state, __gc);
+			lua_settable(state, -3);
+
+			lua_pushliteral(state, "__tostring");
+			lua_pushcfunction(state, __tostring);
+			lua_settable(state, -3);
+
+			lua_pushliteral(state, "__index");
+			luaL_newlib(state, index);
+			lua_settable(state, -3);
+		}
+		return 1;
+	}
+
+	// Class initialization routine
+	static int init(lua_State *state, User &data);
+
+	// Class cleanup routine
+	static int destroy(lua_State *state, User &data);
+
+	// Object allocation function
+	static int __new(lua_State *state)
+	{
+		auto user = new (state) Type;
+		luaL_setmetatable(state, Type::name);
+		return init(state, user->data);
+	}
+
+	// Garbage collection metamethod
+	static int __gc(lua_State *state)
+	{
+		auto data = Type::to(state);
+		return destroy(state, data);
+	}
+
+	// String conversion is common to all
+	static int __tostring(lua_State *state)
+	{
+		auto data = Type::to(state);
+		lua_pushfstring(state, "%s: %p", Type::name, &data);
+		return 1;
+	}
+
+	// Class methods index
+	static luaL_Reg index[];
+};
+
+
+/** Threads ******************************************************************/
+
+
 // POSIX native thread function
 static void *start(void *stack)
 {
@@ -18,25 +86,25 @@ static void *start(void *stack)
 // Create and start a new thread
 static int create(lua_State *state)
 {
-	pthread_t thread;
+	pthread_t id;
 	// Create an independent execution stack
 	lua_State *stack = lua_newthread(state);
 	lua_pop(state, 1);
 	// Copy the stack contents over to thread
 	lua_xmove(state, stack, lua_gettop(state));
 	// Launch thread but long jump if an error occurs
-	int error = pthread_create(&thread, nullptr, start, stack);
+	int error = pthread_create(&id, nullptr, start, stack);
 	if (error) return lux_perror(state, error);
-	// Return the thread id
-	lux_push(state, thread);
+	// Return thread id
+	lux_push(state, id);
 	return 1;
 }
 
 // Detach calling thread from main
 static int detach(lua_State *state)
 {
-	auto thread = lux_to<pthread_t>(state, 1);
-	int error = pthread_detach(thread);
+	auto id = lux_to<pthread_t>(state, 1);
+	int error = pthread_detach(id);
 	if (error) return lux_perror(state, error);
 	else return 0;
 }
@@ -54,9 +122,9 @@ static int equal(lua_State *state)
 static int join(lua_State *state)
 {
 	lua_State *stack;
-	auto thread = lux_to<pthread_t>(state, 1);
-	// Join, getting the execution stack it returns
-	int error = pthread_join(thread, (void**) &stack);
+	auto id = lux_to<pthread_t>(state, 1);
+	// Join, get the execution stack it returns
+	int error = pthread_join(id, (void**) &stack);
 	if (error) return lux_perror(state, error);
 	if (stack) // thread not cancelled
 	{
@@ -71,15 +139,16 @@ static int join(lua_State *state)
 // Get id of the calling thread
 static int self(lua_State *state)
 {
-	lux_push(state, pthread_self());
+	auto id = pthread_self();
+	lux_push(state, id);
 	return 1;
 }
 
 // Cancels execution of a thread
 static int cancel(lua_State *state)
 {
-	auto thread = lux_to<pthread_t>(state, 1);
-	int error = pthread_cancel(thread);
+	auto id = lux_to<pthread_t>(state, 1);
+	int error = pthread_cancel(id);
 	if (error) return lux_perror(state, error);
 	else return 0;
 }
@@ -142,87 +211,48 @@ static int setconcurrency(lua_State *state)
 // Aquire the current concurrency level
 static int getconcurrency(lua_State *state)
 {
-	lua_pushinteger(state, pthread_getconcurrency());
+	int level = pthread_getconcurrency();
+	lua_pushinteger(state, level);
 	return 1;
 }
 
 // Attempt to set the scheduling priority
 static int setschedprio(lua_State *state)
 {
-	auto thread = lux_to<pthread_t>(state, 1);
+	auto id = lux_to<pthread_t>(state, 1);
 	int prio = lua_tointeger(state, 2);
-	int error = pthread_setschedprio(thread, prio);
+	int error = pthread_setschedprio(id, prio);
 	if (error) return lux_perror(state, error);
 	return 0;
 }
 
-/*
-// Cleanup routine for a thread
-static void routine(void *stack)
+
+/** Thread Attributes ********************************************************/
+
+
+typedef Store<pthread_attr_t> pthread_attr; // Storage class for Lux
+
+// Initialize the thread attributes to default
+template <> int pthread_attr::init(lua_State *state, pthread_attr_t &attr)
 {
-	lua_State *state = (lua_State*) stack;
-	// Assume there is a function and arguments on it
-	lua_call(state, lua_gettop(state) - 1, LUA_MULTRET);
-}
-
-// Register a cleanup function for a thread
-static int cleanup_push(lua_State *state)
-{
-	// Create an independent execution stack
-	lua_State *stack = lua_newthread(state);
-	lua_pop(state, 1);
-	// Move stack contents over to new thread
-	lua_xmove(state, stack, lua_gettop(state));
-	// Set this function to be called later
-	pthread_cleanup_push(routine, stack);
-	return 0;
-}
-
-// Remove last cleanup with optional call
-static int cleanup_pop(lua_State *state)
-{
-	bool execute = lua_toboolean(state, 1);
-	pthread_cleanup_pop(execute);
-	return 0;
-}
-*/
-
-
-typedef lux_Store<pthread_attr_t> pthread_attr; // Storage class for Lux
-
-
-// Initialize a thread attributes type
-static int attr_init(lua_State *state)
-{
-	auto attr = new (state) pthread_attr;
-	luaL_setmetatable(state, pthread_attr::name);
-	int error = pthread_attr_init(&attr->data);
+	int error = pthread_attr_init(&attr);
 	if (error) return lux_perror(state, error);
 	return 1;
 }
 
-// Destroy attributes on collection
-static int attr_gc(lua_State *state)
+// Destroy attributes object on collection
+template <> int pthread_attr::destroy(lua_State *state, pthread_attr_t &attr)
 {
-	auto attr = pthread_attr::to(state, 1);
 	int error = pthread_attr_destroy(&attr);
 	if (error) return lux_perror(state, error);
 	return 0;
-}
-
-// Transform pthread_attr type to string
-static int attr_tostring(lua_State *state)
-{
-	auto attr = pthread_attr::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_attr::name, &attr);
-	return 1;
 }
 
 // Create a thread with attributes
 static int attr_create(lua_State *state)
 {
 	pthread_t thread;
-	auto attr = pthread_attr::to(state, 1);
+	auto attr = pthread_attr::to(state);
 	lua_remove(state, 1);
 	// Create an independent execution stack
 	lua_State *stack = lua_newthread(state);
@@ -254,7 +284,7 @@ static int setdetachstate(lua_State *state)
 // Get the detach state of new threads
 static int getdetachstate(lua_State *state)
 {
-	auto attr = pthread_attr::to(state, 1);
+	auto attr = pthread_attr::to(state);
 	int opt, error = pthread_attr_getdetachstate(&attr, &opt);
 	switch (opt) // Convert to string
 	{
@@ -421,35 +451,47 @@ static int getstacksize(lua_State *state)
 	return 1;
 }
 
+// Class method index for thread attributes
+template <> luaL_Reg pthread_attr::index[] =
+	{
+	{"create", attr_create},
+	{"setdetachstate", setdetachstate},
+	{"getdetachstate", getdetachstate},
+	{"setguardsize", setguardsize},
+	{"getguardsize", getguardsize},
+	{"setinheritsched", setinheritsched},
+	{"getinheritsched", getinheritsched},
+	{"setscope", setscope},
+	{"getscope", getscope},
+	{"setstack", setstack},
+	{"getstack", getstack},
+//	{"setstackaddr", setstackaddr},
+//	{"getstackaddr", getstackaddr},
+	{"setstacksize", setstacksize},
+	{"getstacksize", getstacksize},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_mutexattr_t> pthread_mutexattr; // Storage class
 
+/** Mutual Exclusion Attributes **********************************************/
+
+
+typedef Store<pthread_mutexattr_t> pthread_mutexattr; // Storage class for Lux
 
 // Create mutex attributes object
-static int mutexattr_init(lua_State *state)
+template <> int pthread_mutexattr::init(lua_State *state, pthread_mutexattr_t &attr)
 {
-	auto attr = new (state) pthread_mutexattr;
-	luaL_setmetatable(state, pthread_mutexattr::name);
-	int error = pthread_mutexattr_init(&attr->data);
+	int error = pthread_mutexattr_init(&attr);
 	if (error) return lux_perror(state, error);
 	return 1;
 }
 
-// Destroy mutexattr on collection
-static int mutexattr_gc(lua_State *state)
+// Destroy mutex attributes on collection
+template <> int pthread_mutexattr::destroy(lua_State *state, pthread_mutexattr_t &attr)
 {
-	auto attr = pthread_mutexattr::to(state, 1);
 	int error = pthread_mutexattr_destroy(&attr);
 	if (error) return lux_perror(state, error);
 	return 0;
-}
-
-// Convert to string for printing
-static int mutexattr_tostring(lua_State *state)
-{
-	auto attr = pthread_mutexattr::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_mutexattr::name, &attr);
-	return 1;
 }
 
 // Set the priority attributes for mutexes
@@ -591,34 +633,39 @@ static int gettype(lua_State *state)
 	return 1;
 }
 
+// Class method index for mutex attributes
+template <> luaL_Reg pthread_mutexattr::index[] =
+	{
+	{"getprioceiling", getprioceiling},
+	{"setprioceiling", setprioceiling},
+	{"setprotocol", setprotocol},
+	{"getprotocol", getprotocol},
+	{"getpshared", getpshared},
+	{"setpshared", setpshared},
+	{"settype", settype},
+	{"gettype", gettype},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_mutex_t> pthread_mutex; // Storage class for Lux
 
+/** Mutual Exclusion *********************************************************/
+
+
+typedef Store<pthread_mutex_t> pthread_mutex; // Storage class for Lux
 
 // Create a mutual exclusion object
-static int mutex_init(lua_State *state)
+template <> int pthread_mutex::init(lua_State *state, pthread_mutex_t &mutex)
 {
-	auto mutex = new (state) pthread_mutex;
-	luaL_setmetatable(state, pthread_mutex::name);
-	auto mutexattr = pthread_mutexattr::test(state, 1);
-	auto attr = mutexattr ? &mutexattr->data : nullptr;
-	int error = pthread_mutex_init(&mutex->data, attr);
+	auto user = pthread_mutexattr::test(state);
+	auto attr = user ? &user->data : nullptr;
+	int error = pthread_mutex_init(&mutex, attr);
 	if (error) lux_perror(state, error);
 	return 1;
 }
 
-// Convert to string for printing
-static int mutex_tostring(lua_State *state)
-{
-	auto mutex = pthread_mutex::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_mutex::name, &mutex);
-	return 1;
-}
-
 // Destroy mutex on garbage collection
-static int mutex_gc(lua_State *state)
+template <> int pthread_mutex::destroy(lua_State *state, pthread_mutex_t &mutex)
 {
-	auto mutex = pthread_mutex::to(state, 1);
 	int error = pthread_mutex_destroy(&mutex);
 	if (error) return lux_perror(state, error);
 	return 0;
@@ -680,35 +727,37 @@ static int mutex_getprioceiling(lua_State *state)
 	return 1;
 }
 
+// Class method index for mutual exclusions
+template <> luaL_Reg pthread_mutex::index[] =
+	{
+	{"setprioceiling", mutex_setprioceiling},
+	{"getprioceiling", mutex_getprioceiling},
+	{"trylock", mutex_trylock},
+	{"unlock", mutex_unlock},
+	{"lock", mutex_lock},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_condattr_t> pthread_condattr; // Storage class
 
+/** Condition Variable Attributes ********************************************/
+
+
+typedef Store<pthread_condattr_t> pthread_condattr; // Storage class
 
 // Initialize a condition attribute object
-static int condattr_init(lua_State *state)
+template <> int pthread_condattr::init(lua_State *state, pthread_condattr_t &attr)
 {
-	auto attr = new (state) pthread_condattr;
-	luaL_setmetatable(state, pthread_condattr::name);
-	int error = pthread_condattr_init(&attr->data);
+	int error = pthread_condattr_init(&attr);
 	if (error) return lux_perror(state, error);
 	return 0;
 }
 
 // Destroy attributes on garbage collection
-static int condattr_gc(lua_State *state)
+template <> int pthread_condattr::destroy(lua_State *state, pthread_condattr_t &attr)
 {
-	auto attr = pthread_condattr::to(state, 1);
 	int error = pthread_condattr_destroy(&attr);
 	if (error) return lux_perror(state, error);
 	return 0;
-}
-
-// Conver to string for printing
-static int condattr_tostring(lua_State *state)
-{
-	auto attr = pthread_condattr::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_condattr::name, &attr);
-	return 1;
 }
 
 // Set sharing attribute of condition variables
@@ -743,37 +792,36 @@ static int condattr_getpshared(lua_State *state)
 	return 1;
 }
 
+// Class method index for condition attributes
+template <> luaL_Reg pthread_condattr::index[] =
+	{
+	{"setpshared", condattr_setpshared},
+	{"getpshared", condattr_getpshared},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_cond_t> pthread_cond; // Storage class for Lux
 
+/** Condition Variable *******************************************************/
+
+
+typedef Store<pthread_cond_t> pthread_cond; // Storage class for Lux
 
 // Initialize a condition variable
-static int cond_init(lua_State *state)
+template <> int pthread_cond::init(lua_State *state, pthread_cond_t &cond)
 {
-	auto cond = new (state) pthread_cond;
-	luaL_setmetatable(state, pthread_cond::name);
-	auto condattr = pthread_condattr::test(state, 1);
-	auto attr = condattr ? &condattr->data : nullptr;
-	int error = pthread_cond_init(&cond->data, attr);
+	auto user = pthread_condattr::test(state);
+	auto attr = user ? &user->data : nullptr;
+	int error = pthread_cond_init(&cond, attr);
 	if (error) return lux_perror(state, error);
 	return 1;
 }
 
 // Destroy condition on collection
-static int cond_gc(lua_State *state)
+template <> int pthread_cond::destroy(lua_State *state, pthread_cond_t &cond)
 {
-	auto cond = pthread_cond::to(state, 1);
 	int error = pthread_cond_destroy(&cond);
 	if (error) return lux_perror(state, error);
 	return 0;
-}
-
-// Convert to string for printing
-static int cond_tostring(lua_State *state)
-{
-	auto cond = pthread_cond::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_cond::name, &cond);
-	return 1;
 }
 
 // Wait for condition on locked mutex
@@ -804,35 +852,35 @@ static int cond_broadcast(lua_State *state)
 	return 0;
 }
 
+// Class method index for condition variables
+template <> luaL_Reg pthread_cond::index[] =
+	{
+	{"broadcast", cond_broadcast},
+	{"signal", cond_signal},
+	{"wait", cond_wait},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_rwlockattr_t> pthread_rwlockattr; // Storage class
 
+/** Read/Write Lock Attributes ***********************************************/
+
+
+typedef Store<pthread_rwlockattr_t> pthread_rwlockattr; // Storage class
 
 // Initialize read/write locker object
-static int rwlockattr_init(lua_State *state)
+template <> int pthread_rwlockattr::init(lua_State *state, pthread_rwlockattr_t &attr)
 {
-	auto attr = new (state) pthread_rwlockattr;
-	luaL_setmetatable(state, pthread_rwlockattr::name);
-	int error = pthread_rwlockattr_init(&attr->data);
+	int error = pthread_rwlockattr_init(&attr);
 	if (error) return lux_perror(state, error);
 	return 1;
 }
 
 // Destroy attributes on garbage collection
-static int rwlockattr_gc(lua_State *state)
+template <> int pthread_rwlockattr::destroy(lua_State *state, pthread_rwlockattr_t &attr)
 {
-	auto attr = pthread_rwlockattr::to(state, 1);
 	int error = pthread_rwlockattr_init(&attr);
 	if (error) lux_perror(state, error);
 	return 0;
-}
-
-// Convert to string for printing
-static int rwlockattr_tostring(lua_State *state)
-{
-	auto attr = pthread_rwlockattr::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_rwlockattr::name, &attr);
-	return 1;
 }
 
 // Set sharing attribute of read/write locker
@@ -867,37 +915,36 @@ static int rwlockattr_getpshared(lua_State *state)
 	return 1;
 }
 
+// Class method index for rwlock attributes
+template <> luaL_Reg pthread_rwlockattr::index[] =
+	{
+	{"setpshared", rwlockattr_setpshared},
+	{"getpshared", rwlockattr_getpshared},
+	{nullptr}
+	};
 
-typedef lux_Store<pthread_rwlock_t> pthread_rwlock; // Storage class for Lux
 
+/** Read/Wright Lock *********************************************************/
+
+
+typedef Store<pthread_rwlock_t> pthread_rwlock; // Storage class for Lux
 
 // Initialize a read/write locker object
-static int rwlock_init(lua_State *state)
+template <> int pthread_rwlock::init(lua_State *state, pthread_rwlock_t &rwlock)
 {
-	auto rwlock = new (state) pthread_rwlock;
-	luaL_setmetatable(state, pthread_rwlock::name);
-	auto rwlockattr = pthread_rwlockattr::test(state, 1);
-	auto attr = rwlockattr ? &rwlockattr->data : nullptr;
-	int error = pthread_rwlock_init(&rwlock->data, attr);
+	auto user = pthread_rwlockattr::test(state);
+	auto attr = user ? &user->data : nullptr;
+	int error = pthread_rwlock_init(&rwlock, attr);
 	if (error) return lux_perror(state, error);
 	return 1;
 }
 
 // Destroy object on collection
-static int rwlock_gc(lua_State *state)
+template <> int pthread_rwlock::destroy(lua_State *state, pthread_rwlock_t &rwlock)
 {
-	auto rwlock = pthread_rwlock::to(state, 1);
 	int error = pthread_rwlock_destroy(&rwlock);
 	if (error) lux_perror(state, error);
 	return 0;
-}
-
-// Convert to string for printing
-static int rwlock_tostring(lua_State *state)
-{
-	auto rwlock = pthread_rwlock::to(state, 1);
-	lua_pushfstring(state, "%s: %p", pthread_rwlock::name, &rwlock);
-	return 1;
 }
 
 // Attempt to aquire a reading lock
@@ -945,22 +992,24 @@ static int rwlock_unlock(lua_State *state)
 	return 0;
 }
 
+// Class method index for read/write locker
+template <> luaL_Reg pthread_rwlock::index[] =
+	{
+	{"tryrdlock", rwlock_tryrdlock},
+	{"trywrlock", rwlock_trywrlock},
+	{"rdlock", rwlock_rdlock},
+	{"wrlock", rwlock_wrlock},
+	{"unlock", rwlock_unlock},
+	{nullptr}
+	};
 
-// Main waits on threads
-static void onexit(void)
-{
-	int value = EXIT_SUCCESS;
-	pthread_exit(&value);
-}
+
+/** Module Loader ************************************************************/
+
 
 // The Lua C module entry point
 extern "C" int luaopen_pthread(lua_State *state)
 {
-	// Ensure that we can wait on child threads before program terminates
-	if (atexit(onexit) < 0) return luaL_error(state, "Cannot make exit");
-
-	// pthread
-
 	luaL_Reg regs[] =
 	{
 	{"create", create},
@@ -974,185 +1023,26 @@ extern "C" int luaopen_pthread(lua_State *state)
 	{"getconcurrency", getconcurrency},
 	{"setconcurrency", setconcurrency},
 	{"setschedprio", setschedprio},
-//	{"cleanup_push", cleanup_push},
-//	{"cleanup_pop", cleanup_pop},
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
 
-	// pthread_attr
-
-	luaL_newmetatable(state, pthread_attr::name);
-	luaL_Reg attr[] =
+	luaL_Reg objs[] =
 	{
-	{"init", attr_init},
-	{"__tostring", attr_tostring},
-	{"__gc", attr_gc},
+	{"attr", pthread_attr::open},
+	{"mutex", pthread_mutex::open},
+	{"mutexattr", pthread_mutexattr::open},
+	{"cond", pthread_cond::open},
+	{"condattr", pthread_condattr::open},
+	{"rwlock", pthread_rwlock::open},
+	{"rwlockattr", pthread_rwlockattr::open},
 	{nullptr}
 	};
-	luaL_setfuncs(state, attr, 0);
-	luaL_Reg attr_index[] =
+	for (auto r=objs; r->name; ++r)
 	{
-	{"create", attr_create},
-	{"setdetachstate", setdetachstate},
-	{"getdetachstate", getdetachstate},
-	{"setguardsize", setguardsize},
-	{"getguardsize", getguardsize},
-	{"setinheritsched", setinheritsched},
-	{"getinheritsched", getinheritsched},
-	{"setscope", setscope},
-	{"getscope", getscope},
-	{"setstack", setstack},
-	{"getstack", getstack},
-//	{"setstackaddr", setstackaddr},
-//	{"getstackaddr", getstackaddr},
-	{"setstacksize", setstacksize},
-	{"getstacksize", getstacksize},
-	{nullptr}
-	};
-	luaL_newlib(state, attr_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "attr");
-
-	// pthread_mutex
-
-	luaL_newmetatable(state, pthread_mutex::name);
-	luaL_Reg mutex_regs[] =
-	{
-	{"init", mutex_init},
-	{"__tostring", mutex_tostring},
-	{"__gc", mutex_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, mutex_regs, 0);
-	luaL_Reg mutex_index[] =
-	{
-	{"setprioceiling", mutex_setprioceiling},
-	{"getprioceiling", mutex_getprioceiling},
-	{"trylock", mutex_trylock},
-	{"unlock", mutex_unlock},
-	{"lock", mutex_lock},
-	{nullptr}
-	};
-	luaL_newlib(state, mutex_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "mutex");
-
-	// pthread_mutexattr
-
-	luaL_newmetatable(state, pthread_mutexattr::name);
-	luaL_Reg mutexattr_regs[] =
-	{
-	{"init", mutexattr_init},
-	{"__tostring", mutexattr_tostring},
-	{"__gc", mutexattr_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, mutexattr_regs, 0);
-	luaL_Reg mutexattr_index[] =
-	{
-	{"getprioceiling", getprioceiling},
-	{"setprioceiling", setprioceiling},
-	{"setprotocol", setprotocol},
-	{"getprotocol", getprotocol},
-	{"getpshared", getpshared},
-	{"setpshared", setpshared},
-	{"settype", settype},
-	{"gettype", gettype},
-	{nullptr}
-	};
-	luaL_newlib(state, mutexattr_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "mutexattr");
-
-	// pthread_cond
-
-	luaL_newmetatable(state, pthread_cond::name);
-	luaL_Reg cond_regs[] =
-	{
-	{"init", cond_init},
-	{"__tostring", cond_tostring},
-	{"__gc", cond_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, cond_regs, 0);
-	luaL_Reg cond_index[] =
-	{
-	{"broadcast", cond_broadcast},
-	{"signal", cond_signal},
-	{"wait", cond_wait},
-	{nullptr}
-	};
-	luaL_newlib(state, cond_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "cond");
-
-	// pthread_condattr
-
-	luaL_newmetatable(state, pthread_condattr::name);
-	luaL_Reg condattr_regs[] =
-	{
-	{"init", condattr_init},
-	{"__tostring", condattr_tostring},
-	{"__gc", condattr_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, condattr_regs, 0);
-	luaL_Reg condattr_index[] =
-	{
-	{"setpshared", condattr_setpshared},
-	{"getpshared", condattr_getpshared},
-	{nullptr}
-	};
-	luaL_newlib(state, condattr_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "condattr");
-
-	// pthread_rwlock
-
-	luaL_newmetatable(state, pthread_rwlock::name);
-	luaL_Reg rwlock_regs[] =
-	{
-	{"init", rwlock_init},
-	{"__tostring", rwlock_tostring},
-	{"__gc", rwlock_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, rwlock_regs, 0);
-	luaL_Reg rwlock_index[] =
-	{
-	{"tryrdlock", rwlock_tryrdlock},
-	{"trywrlock", rwlock_trywrlock},
-	{"rdlock", rwlock_rdlock},
-	{"wrlock", rwlock_wrlock},
-	{"unlock", rwlock_unlock},
-	{nullptr}
-	};
-	luaL_newlib(state, rwlock_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "rwlock");
-
-	// pthread_wrlockattr
-
-	luaL_newmetatable(state, pthread_rwlockattr::name);
-	luaL_Reg rwlockattr_regs[] =
-	{
-	{"init", rwlockattr_init},
-	{"__tostring", rwlockattr_tostring},
-	{"__gc", rwlockattr_gc},
-	{nullptr}
-	};
-	luaL_setfuncs(state, rwlockattr_regs, 0);
-	luaL_Reg rwlockattr_index[] =
-	{
-	{"setpshared", rwlockattr_setpshared},
-	{"getpshared", rwlockattr_getpshared},
-	{nullptr}
-	};
-	luaL_newlib(state, rwlockattr_index);
-	lua_setfield(state, -2, "__index");
-	lua_setfield(state, -2, "rwlockattr");
-
+		luaL_requiref(state, r->name, r->func, false);
+		lua_setfield(state, -2, r->name);
+	}
 	
 	return 1; // pthread table
 }

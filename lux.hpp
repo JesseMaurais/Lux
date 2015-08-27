@@ -2,6 +2,7 @@
 #include "lxstore.hpp"
 #include "lxstack.hpp"
 #include "lxthunk.hpp"
+#include "lxchars.hpp"
 #include "lxarray.hpp"
 #include "lxclass.hpp"
 #include "lxbuffs.hpp"
