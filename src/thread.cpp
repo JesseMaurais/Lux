@@ -5,6 +5,10 @@
  * features and does not give the programmer as much control over the behavior
  * of generated threads, their attributes, or their locking mechanisms and the
  * attributes of these locks.
+ *
+ * This code does not currently catch exceptions properly and report them back
+ * to the interpreter, so that this module may crash a terminal session if any
+ * exception gets thrown. 
  */
 
 #include "lux.hpp"
@@ -127,7 +131,7 @@ struct Mutex
 
 	static int __new(lua_State *state)
 	{
-		new (state) std::mutex;
+		new (state) Type;
 		// Set metatable for __gc and others
 		luaL_setmetatable(state, Type::name);
 		return 1;
@@ -210,7 +214,7 @@ struct Condition
 
 	static int __new(lua_State *state)
 	{
-		new (state) std::condition_variable_any;
+		new (state) Type;
 		// Set metatable for __gc and others
 		luaL_setmetatable(state, Type::name);
 		return 1;
@@ -235,7 +239,7 @@ struct Condition
 	{
 		auto user = Type::check(state, 1);
 		auto mutex = Mutex::Type::check(state, 2);
-		// Block until condition notify called
+		// Block until condition notify
 		user->data.wait(mutex->data);
 		return 0;
 	}
@@ -300,11 +304,11 @@ struct Future
 		// Move arguments to stack
 		int top = lua_gettop(state);
 		lua_xmove(state, stack, top);
-		// Create a default future object with stack
-		auto data = new (state) std::future<lua_State*>;
+		// Create a default future
+		auto user = new (state) Type;
 		luaL_setmetatable(state, Type::name);
-		// Start asynchronous execution
-		*data = std::async(call, stack);
+		// Start with asynchronous execution
+		user->data = std::async(call, stack);
 		// Done
 		return 1;
 	}
@@ -346,16 +350,16 @@ struct Future
 		Type::name = lua_tostring(state, 1);
 		luaL_newmetatable(state, Type::name);
 	
+		lua_pushliteral(state, "new");
+		lua_pushcfunction(state, __new);
+		lua_settable(state, -3);
+	
 		lua_pushliteral(state, "__gc");
 		lua_pushcfunction(state, __gc);
 		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__tostring");
 		lua_pushcfunction(state, __tostring);
-		lua_settable(state, -3);
-	
-		lua_pushliteral(state, "new");
-		lua_pushcfunction(state, __new);
 		lua_settable(state, -3);
 
 		luaL_Reg index[] =
@@ -380,7 +384,8 @@ struct Promise
 
 	static int __new(lua_State *state)
 	{
-		new (state) std::promise<lua_State*>;
+		new (state) Type;
+		// Set metatable for __gc and others
 		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
@@ -402,10 +407,11 @@ struct Promise
 
 	static int get(lua_State *state)
 	{
-		// Engage with a future using this promise
-		auto data = new (state) std::future<lua_State*>;
-		luaL_setmetatable(state, Type::name);
-		*data = Type::to(state).get_future();
+		auto user = new (state) Future::Type;
+		// Set metatable for __gc and others
+		luaL_setmetatable(state, Future::Type::name);
+		// Engage with the future using this promise
+		user->data = Type::to(state).get_future();
 		return 1;
 	}
 
@@ -414,7 +420,8 @@ struct Promise
 		auto user = Type::check(state);
 		// Create an independent execution stack
 		lua_State *stack = lua_newthread(state);
-		lua_pop(state, 2);
+		lua_remove(state, 1); // user
+		lua_pop(state, 1); // stack
 		// Move arguments to stack
 		int top = lua_gettop(state);
 		lua_xmove(state, stack, top);
@@ -460,19 +467,22 @@ struct Promise
 
 extern "C" int luaopen_thread(lua_State *state)
 {
-	luaL_Reg regs[] =
+	if (Thread::open(state))
 	{
-	{"thread", Thread::open},
-	{"mutex", Mutex::open},
-	{"condition", Condition::open},
-	{"future", Future::open},
-	{"promise", Promise::open},
-	{nullptr}
-	};
-	for (auto r=regs; r->name; ++r)
-	{
-	 luaL_requiref(state, r->name, r->func, true);
-	 lua_pop(state, 1);
+		luaL_Reg regs[] =
+		{
+		{"mutex", Mutex::open},
+		{"condition", Condition::open},
+		{"future", Future::open},
+		{"promise", Promise::open},
+		{nullptr}
+		};
+		for (auto r=regs; r->name; ++r)
+		{
+		 luaL_requiref(state, r->name, r->func, false);
+		 lua_setfield(state, -2, r->name);
+		}
+		return 1;
 	}
 	return 0;
 }

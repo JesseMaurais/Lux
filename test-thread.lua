@@ -1,30 +1,29 @@
 print "Test the use of C++11 threads in Lua"
 
-require'thread'
+thread = require'thread'
 
---[[
-function sqr(arg)
+
+function square(arg)
 	x = arg:get()
 	print(x*x)
 end
 
-prom = promise.new()
-arg = prom:get()
-th = thread.new(sqr, arg)
+promise = thread.promise.new()
+future = promise:get()
+aux = thread.new(square, future)
 print "Enter some number and its square is calculated in the thread"
-str = io.read()
-x = tonumber(str)
-prom:set(x)
-]]--
+s = io.read()
+x = tonumber(s)
+promise:set(x)
+aux:join()
 
-function cat(a, b, c, d)
+
+function concat(a, b, c, d)
 	return 'Message: ' .. a .. b .. c .. d
 end
 
-fut = future.new(cat, 'Hello', ' ', 'World', '!')
-print "Press any key to see the threads message"
-io.read()
-message = fut:get()
+future = thread.future.new(concat, 'Hello', ' ', 'World', '!')
+print "The thread sends a message:"
+message = future:get()
 print(message)
-later = nil
 
