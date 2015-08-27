@@ -303,8 +303,8 @@ struct Future
 		// Create a default future object with stack
 		auto data = new (state) std::future<lua_State*>;
 		luaL_setmetatable(state, Type::name);
-		// Set asynchronous execution in thread
-		*data = std::async(Thread::call, stack);
+		// Start asynchronous execution
+		*data = std::async(call, stack);
 		// Done
 		return 1;
 	}

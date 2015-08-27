@@ -113,11 +113,30 @@ struct Regex
 		match_flag_type type = 0;
 		for (int arg = 3; arg < top; ++arg)
 			type |= optmatch(state, arg);
-		// Call the regex match function with given flags
+		// Call the regex search function with given flags
 		bool find = std::regex_match(string, regex, type);
 		lua_pushboolean(state, find);
 		return 1;
 	}
+
+	/*
+	static int replace(lua_State *state)
+	{
+		auto regex = Type::to(state, 1);
+		const char *string = luaL_checkstring(state, 2);
+		const char *with = luaL_checkstring(state, 3);
+		// Number of optional arguments
+		int top = lua_gettop(state);
+		// Convert strings to flags
+		match_flag_type type = 0;
+		for (int arg = 4; arg < top; ++arg)
+			type |= optmatch(state, arg);
+		// Call the regex replace function with given flags
+		std::string str = std::regex_replace(string, regex, with, type);
+		lua_pushstring(state, str.c_str());
+		return 1;
+	}
+	*/
 
 	static int open(lua_State *state)
 	{
@@ -144,6 +163,7 @@ struct Regex
 		{
 		{"match", match},
 		{"search", search},
+//		{"replace", replace},
 		{nullptr}
 		};
 		
