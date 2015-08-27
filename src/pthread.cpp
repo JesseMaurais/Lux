@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 
-// Storage class for POSIX types
+// Storage class for POSIX types related to threads
 template <class User> struct Store : lux_Store<User>
 {
 	using Type = lux_Store<User>;
@@ -12,24 +12,24 @@ template <class User> struct Store : lux_Store<User>
 	static int open(lua_State *state)
 	{
 		Type::name = lua_tostring(state, 1);
-		if (luaL_newmetatable(state, Type::name))
-		{
-			lua_pushliteral(state, "init");
-			lua_pushcfunction(state, __new);
-			lua_settable(state, -3);
+		luaL_newmetatable(state, Type::name);
+		
+		lua_pushliteral(state, "init");
+		lua_pushcfunction(state, __new);
+		lua_settable(state, -3);
 
-			lua_pushliteral(state, "__gc");
-			lua_pushcfunction(state, __gc);
-			lua_settable(state, -3);
+		lua_pushliteral(state, "__gc");
+		lua_pushcfunction(state, __gc);
+		lua_settable(state, -3);
 
-			lua_pushliteral(state, "__tostring");
-			lua_pushcfunction(state, __tostring);
-			lua_settable(state, -3);
+		lua_pushliteral(state, "__tostring");
+		lua_pushcfunction(state, __tostring);
+		lua_settable(state, -3);
 
-			lua_pushliteral(state, "__index");
-			luaL_newlib(state, index);
-			lua_settable(state, -3);
-		}
+		lua_pushliteral(state, "__index");
+		luaL_newlib(state, index);
+		lua_settable(state, -3);
+		
 		return 1;
 	}
 
@@ -57,8 +57,8 @@ template <class User> struct Store : lux_Store<User>
 	// String conversion is common to all
 	static int __tostring(lua_State *state)
 	{
-		auto data = Type::to(state);
-		lua_pushfstring(state, "%s: %p", Type::name, &data);
+		// Puts formatted string of metatable name and storage address
+		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
 
@@ -251,7 +251,7 @@ template <> int pthread_attr::destroy(lua_State *state, pthread_attr_t &attr)
 // Create a thread with attributes
 static int attr_create(lua_State *state)
 {
-	pthread_t thread;
+	pthread_t id;
 	auto attr = pthread_attr::to(state);
 	lua_remove(state, 1);
 	// Create an independent execution stack
@@ -260,10 +260,10 @@ static int attr_create(lua_State *state)
 	// Copy the stack contents over to thread
 	lua_xmove(state, stack, lua_gettop(state));
 	// Launch thread but long jump if an error occurs
-	int error = pthread_create(&thread, &attr, start, stack);
+	int error = pthread_create(&id, &attr, start, stack);
 	if (error) return lux_perror(state, error);
-	// Return the thread id
-	lux_push(state, thread);
+	// Return thread id
+	lux_push(state, id);
 	return 1;
 }
 
@@ -479,7 +479,8 @@ template <> luaL_Reg pthread_attr::index[] =
 typedef Store<pthread_mutexattr_t> pthread_mutexattr; // Storage class for Lux
 
 // Create mutex attributes object
-template <> int pthread_mutexattr::init(lua_State *state, pthread_mutexattr_t &attr)
+template <>
+int pthread_mutexattr::init(lua_State *state, pthread_mutexattr_t &attr)
 {
 	int error = pthread_mutexattr_init(&attr);
 	if (error) return lux_perror(state, error);
@@ -487,7 +488,8 @@ template <> int pthread_mutexattr::init(lua_State *state, pthread_mutexattr_t &a
 }
 
 // Destroy mutex attributes on collection
-template <> int pthread_mutexattr::destroy(lua_State *state, pthread_mutexattr_t &attr)
+template <>
+int pthread_mutexattr::destroy(lua_State *state, pthread_mutexattr_t &attr)
 {
 	int error = pthread_mutexattr_destroy(&attr);
 	if (error) return lux_perror(state, error);

@@ -13,15 +13,18 @@
 #include <condition_variable>
 #include <future>
 
+
+static lua_State *call(lua_State *state)
+{
+	// State contains only a function and its arguments
+	lua_call(state, lua_gettop(state) - 1, LUA_MULTRET);
+	return state;
+}
+
+
 struct Thread
 {
 	typedef lux_Store<std::thread> Type;
-
-	static lua_State *call(lua_State *state)
-	{
-		lua_call(state, lua_gettop(state) - 1, LUA_MULTRET);
-		return state;
-	}
 
 	static int __new(lua_State *state)
 	{
@@ -40,36 +43,42 @@ struct Thread
 	static int __gc(lua_State *state)
 	{
 		using namespace std;
+		// Explicit destruction
 		Type::to(state).~thread();
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
+		// Puts formatted string of metatable name and storage address
 		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
 
 	static int yield(lua_State *state)
 	{
+		// Always current thread
 		std::this_thread::yield();
 		return 0;
 	}
 
 	static int join(lua_State *state)
 	{
+		// Join this with caller
 		Type::to(state).join();
 		return 0;
 	}
 
 	static int detach(lua_State *state)
 	{
+		// Make thread unjoinable
 		Type::to(state).detach();
 		return 0;
 	}
 
 	static int joinable(lua_State *state)
 	{
+		// Query the detached state of this thread
 		bool joinable = Type::to(state).joinable();
 		lua_pushboolean(state, joinable);
 		return 1;
@@ -119,6 +128,7 @@ struct Mutex
 	static int __new(lua_State *state)
 	{
 		new (state) std::mutex;
+		// Set metatable for __gc and others
 		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
@@ -126,30 +136,35 @@ struct Mutex
 	static int __gc(lua_State *state)
 	{
 		using namespace std;
+		// Explicit destruction
 		Type::to(state).~mutex();
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
+		// Puts formatted string of metatable name and storage address
 		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
 
 	static int lock(lua_State *state)
 	{
+		// Block until locked
 		Type::to(state).lock();
 		return 0;
 	}
 
 	static int unlock(lua_State *state)
 	{
+		// Unlock a locked mutex
 		Type::to(state).unlock();
 		return 0;
 	}
 
 	static int try_lock(lua_State *state)
 	{
+		// Do not block if a lock cannot be made
 		bool locked = Type::to(state).try_lock();
 		lux_push(state, locked);
 		return 1;
@@ -196,6 +211,7 @@ struct Condition
 	static int __new(lua_State *state)
 	{
 		new (state) std::condition_variable_any;
+		// Set metatable for __gc and others
 		luaL_setmetatable(state, Type::name);
 		return 1;
 	}
@@ -203,12 +219,14 @@ struct Condition
 	static int __gc(lua_State *state)
 	{
 		using namespace std;
+		// Explict destruction
 		Type::to(state).~condition_variable_any();
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
+		// Puts formatted string of metatable name and storage address
 		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
@@ -217,18 +235,21 @@ struct Condition
 	{
 		auto user = Type::check(state, 1);
 		auto mutex = Mutex::Type::check(state, 2);
+		// Block until condition notify called
 		user->data.wait(mutex->data);
 		return 0;
 	}
 
 	static int notify(lua_State *state)
 	{
+		// Resume one blocked thread
 		Type::to(state).notify_one();
 		return 0;
 	}
 
 	static int broadcast(lua_State *state)
 	{
+		// Resume all blocked threads
 		Type::to(state).notify_all();
 		return 0;
 	}
@@ -298,6 +319,7 @@ struct Future
 
 	static int __tostring(lua_State *state)
 	{
+		// Puts formatted string of metatable name and storage address
 		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
@@ -314,14 +336,8 @@ struct Future
 
 	static int wait(lua_State *state)
 	{
+		// Block until ready
 		Type::to(state).wait();
-		return 0;
-	}
-
-	static int valid(lua_State *state)
-	{
-		bool is = Type::to(state).valid();
-		lua_pushboolean(state, is);
 		return 0;
 	}
 
@@ -346,7 +362,6 @@ struct Future
 		{
 		{"get", get},
 		{"wait", wait},
-		{"valid", valid},
 		{nullptr}
 		};
 
@@ -373,18 +388,21 @@ struct Promise
 	static int __gc(lua_State *state)
 	{
 		using namespace std;
+		// Explicit destruction
 		Type::to(state).~promise();
 		return 0;
 	}
 
 	static int __tostring(lua_State *state)
 	{
+		// Puts formatted string of metatable name and storage address
 		lua_pushfstring(state, "%s: %p", Type::name, Type::test(state));
 		return 1;
 	}
 
 	static int get(lua_State *state)
 	{
+		// Engage with a future using this promise
 		auto data = new (state) std::future<lua_State*>;
 		luaL_setmetatable(state, Type::name);
 		*data = Type::to(state).get_future();
