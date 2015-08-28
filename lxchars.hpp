@@ -189,14 +189,12 @@ struct lux_Chars : mbstate_t
 	template <class Char, class User>
 	int fromcast(char *dst, const User *src, size_t len)
 	{
-		assert(sizeof(User) == sizeof(Char));
 		return fromstring(dst, (const Char *) src, len);
 	}
 
 	template <class Char, class User>
 	int tocast(User *dst, const char *src, size_t len)
 	{
-		assert(sizeof(User) == sizeof(Char));
 		return tostring((Char *) dst, src, len);
 	}
 
@@ -220,40 +218,117 @@ struct lux_Chars : mbstate_t
 	}
 };
 
-// Copy floating point arrays to preserve numeric values
+#include "lxerror.hpp"
+#include "lxstore.hpp"
+#include "lxstack.hpp"
 
-template <>
-int lux_Chars::from<float>(char *dst, const float *src, size_t len)
+template <class Char> struct lux_Coder
 {
-	return fromcopy<char32_t>(dst, src, len);
-}
-template <>
-int lux_Chars::to<float>(float *dst, const char *src, size_t len)
-{
-	return tocopy<char32_t>(dst, src, len);
-}
+	typedef lux_Store<Char*> Type;
 
-template <>
-int lux_Chars::from<double>(char *dst, const double *src, size_t len)
-{
-	return fromcopy<char32_t>(dst, src, len);
-}
-template <>
-int lux_Chars::to<double>(double *dst, const char *src, size_t len)
-{
-	return tocopy<char32_t>(dst, src, len);
-}
+	/// Construct this array from a string
+	static int decode(lua_State *state)
+	{
+		size_t size;
+		lux_Chars shift;
+		// Get UTF-8 encoded string and it's size in bytes
+		const char *string = lua_tolstring(state, 1, &size);
+		// Find the number of multibyte characters
+		int length = shift.stringsize(string, size);
+		// Check the string for encoding errors
+		if (length < 0) return lux_argerror(state, 1);
+		else shift.reset();
+		// Create array and convert
+		Char *data = new Char [length];
+		size = shift.to(data, string, length);
+		// Put the array on the stack
+		Type::push(state, data, size);
+		return 1;
+	}
 
-template <>
-int lux_Chars::from<long double>(char *dst, const long double *src, size_t len)
-{
-	return fromcopy<char32_t>(dst, src, len);
-}
-template <>
-int lux_Chars::to<long double>(long double *dst, const char *src, size_t len)
-{
-	return tocopy<char32_t>(dst, src, len);
-}
+	/// Convert this array to a string
+	static int encode(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		// Pointers not supported
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Store UTF-8 characters
+		char data[size * MB_CUR_MAX];
+		// Conversion
+		lux_Chars shift;
+		size = shift.from(data, user->data, size);
+		if (size < 0) return lux_perror(state);
+		// Push data as string onto stack
+		lua_pushlstring(state, data, size);
+		return 1;
+	}
+
+	/// Write as string to a file
+	static int puts(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointers not supported
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Stream that we will write to
+		FILE *file = lux_opt(state, 2, stdout);
+		// Store UTF-8 characters
+		char data[size * MB_CUR_MAX];
+		// Conversion
+		lux_Chars shift;
+		size = shift.from(data, user->data, size);
+		if (size < 0) return lux_perror(state);
+		// Using fputs on given file
+		data[size] = '\0';
+		fputs(data, file);
+		// Return the number of bytes
+		lua_pushinteger(state, size);
+		return 1;
+	}
+
+	/// Read as string from a file
+	static int gets(lua_State *state)
+	{
+		Type *user = Type::check(state, 1);
+		// Pointers not supported
+		int size = abs(user->size);
+		lux_argcheck(state, 1, 0 < size);
+		// Stream that we will read from
+		FILE *file = lux_opt(state, 2, stdin);
+		// Store UTF-8 characters
+		char data[size * MB_CUR_MAX];
+		// Using fgets on given file
+		fgets(data, sizeof(data), file);
+		// Conversion
+		lux_Chars shift;
+		size = shift.to(user->data, data, sizeof(data));
+		if (size < 0) return lux_perror(state);
+		// Return the number of bytes
+		lua_pushinteger(state, size);
+		return 1;
+	}
+
+	static int open(lua_State *state)
+	{
+		auto name = lua_tostring(state, -1);
+		if (luaL_getmetatable(state, name))
+		{
+			luaL_Reg index[] =
+			{
+			{"decode", decode},
+			{"encode", encode},
+			{"puts", puts},
+			{"gets", gets},
+			{nullptr}
+			};
+			luaL_setfuncs(state, index, 0);
+			return 1;
+		}
+		return luaL_error(state, "%s not extant", name); 
+	}
+};
+
 
 #endif // file
 

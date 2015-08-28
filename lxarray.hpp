@@ -24,7 +24,6 @@
 #include "lxstore.hpp"
 #include "lxstack.hpp"
 #include "lxbuffs.hpp"
-#include "lxchars.hpp"
 #include "lxerror.hpp"
 
 /// Emulate C strings/arrays/pointers in Lua with extra operations
@@ -66,26 +65,6 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	// Construct this array from a string
-	static int fromstring(lua_State *state)
-	{
-		size_t size;
-		lux_Chars shift;
-		// Get UTF-8 encoded string and it's size in bytes
-		const char *string = lua_tolstring(state, 1, &size);
-		// Find the number of multibyte characters
-		int length = shift.stringsize(string, size);
-		// Check the string for encoding errors
-		if (length < 0) return lux_argerror(state, 1);
-		else shift.reset();
-		// Create array and convert
-		User *data = new User [length];
-		size = shift.to(data, string, length);
-		// Put the array on the stack
-		Type::push(state, data, size);
-		return 1;
-	}
-
 	/// Copy this array from another one
 	static int fromarray(lua_State *state)
 	{
@@ -114,15 +93,12 @@ template <class User> struct lux_Array
 		case LUA_TTABLE:
 			// Copy table contents
 			return fromtable(state);
-		case LUA_TSTRING:
-			// Convert UTF-8 string
-			return fromstring(state);
 		case LUA_TUSERDATA:
 			// Copied from an array
 			return fromarray(state);
 		};
 		// We only construct from these argument types
-		return luaL_argerror(state, 1, "size, table, string");
+		return luaL_argerror(state, 1, "size, table, array");
 	}
 
 	/// Garbage collection callback
@@ -199,6 +175,7 @@ template <class User> struct lux_Array
 		int size = abs(user->size);
 		if (!size) // pointer
 		{
+		 // Put formatted string of metatable name and address
 		 lua_pushfstring(state, "%s: %p", Type::name, user->data);
 		 return 1;
 		}
@@ -589,51 +566,6 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	/// Write as string to a file
-	static int puts(lua_State *state)
-	{
-		Type *user = Type::check(state, 1);
-		// Pointers not supported
-		int size = abs(user->size);
-		lux_argcheck(state, 1, 0 < size);
-		// Stream that we will write to
-		FILE *file = lux_opt(state, 2, stdout);
-		// Store UTF-8 characters
-		char data[size * MB_CUR_MAX];
-		// Conversion
-		lux_Chars shift;
-		size = shift.from(data, user->data, size);
-		if (size < 0) return lux_perror(state);
-		// Using fputs on given file
-		data[size] = '\0';
-		fputs(data, file);
-		// Return amount written
-		lux_push(state, size);
-		return 1;
-	}
-
-	/// Read as string from a file
-	static int gets(lua_State *state)
-	{
-		Type *user = Type::check(state, 1);
-		// Pointers not supported
-		int size = abs(user->size);
-		lux_argcheck(state, 1, 0 < size);
-		// Stream that we will read from
-		FILE *file = lux_opt(state, 2, stdin);
-		// Store UTF-8 characters
-		char data[size * MB_CUR_MAX];
-		// Using fgets on given file
-		fgets(data, sizeof(data), file);
-		// Conversion
-		lux_Chars shift;
-		size = shift.to(user->data, data, sizeof(data));
-		if (size < 0) return lux_perror(state);
-		// Return amount read
-		lux_push(state, size);
-		return 1;
-	}
-
 	/// Set bits in sub array to zero
 	static int zero(lua_State *state)
 	{
@@ -747,8 +679,6 @@ template <class User> struct lux_Array
 			{
 			{"write", write},
 			{"read", read},
-			{"puts", puts},
-			{"gets", gets},
 			{"zero", zero},
 			{"swap", swap},
 			{"copy", copy},
@@ -760,9 +690,9 @@ template <class User> struct lux_Array
 			{"new", __new},
 			{"__gc", __gc},
 			{"__tostring", __tostring},
-			{"__concat", __concat},
 			{"__newindex", __newindex},
 			{"__index", __index},
+			{"__concat", __concat},
 			{"__len", __len},
 			{"__mul", __mul},
 			{"__div", __div},

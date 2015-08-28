@@ -67,7 +67,7 @@ template <class Real> struct lux_Complex
 	// Returns a reference to the stack object or not at all
 	static inline Complex &obj(lua_State *state, int stack=1)
 	{
-		return Type::check(state, stack)->data;
+		return Type::to(state, stack);
 	}
 
 	// Returns a stack value converted to a (real) number
@@ -260,7 +260,7 @@ template <class Real> struct lux_Complex
 		{nullptr}
 		};
 		luaL_setfuncs(state, index, 0);
-		// The imaginary sqrt(-1)
+		// The imaginary unit sqrt(-1)
 		lua_pushliteral(state, "i");
 		lux_push(state, Complex(0, 1));
 		lua_settable(state, -3);
@@ -298,62 +298,6 @@ int lux_Array<complex<long double>>::compare(const void *p, const void *q)
 	return lux_Complex<long double>::compare(p, q);
 }
 
-// Overload arrays to prohibit UTF-8 string conversions
-
-template <>
-int lux_Array<complex<float>>::puts(lua_State *state)
-{
-	return luaL_error(state, "Put string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<double>>::puts(lua_State *state)
-{
-	return luaL_error(state, "Put string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<long double>>::puts(lua_State *state)
-{
-	return luaL_error(state, "Put string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<float>>::gets(lua_State *state)
-{
-	return luaL_error(state, "Get string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<double>>::gets(lua_State *state)
-{
-	return luaL_error(state, "Get string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<long double>>::gets(lua_State *state)
-{
-	return luaL_error(state, "Get string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<float>>::fromstring(lua_State *state)
-{
-	return luaL_error(state, "UTF string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<double>>::fromstring(lua_State *state)
-{
-	return luaL_error(state, "UTF string unsupported for complex");
-}
-
-template <>
-int lux_Array<complex<long double>>::fromstring(lua_State *state)
-{
-	return luaL_error(state, "UTF string unsupported for complex");
-}
-
 // Lua module entry point
 
 extern "C" int luaopen_complex(lua_State *state)
@@ -362,7 +306,6 @@ extern "C" int luaopen_complex(lua_State *state)
 	{
 	{"complex", lux_Complex<float>::open},
 	{"complexd", lux_Complex<double>::open},
-	{"complexld", lux_Complex<long double>::open},
 	{nullptr}
 	};
 	for (auto r=regs; r->name; ++r)

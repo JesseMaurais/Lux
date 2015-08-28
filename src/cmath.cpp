@@ -9,45 +9,53 @@ template <class real> using complex = std::complex<real>;
 #include <omp.h>
 #endif
 
+
 template <class Number> struct Operations
 {
-	typedef lux_Array<Number> Array;
 	typedef lux_Store<Number*> Type;
 
-	static int sin(lua_State *state)
+	Number *from, *to;
+	size_t size;
+	bool result;
+
+	Operations(lua_State *state)
 	{
-		// Target array to write results
-		auto to = Type::check(state, 1);
-		int to_size = abs(to->size);
-		// Source array to read parameters
-		auto from = Type::check(state, 2);
-		int from_size = abs(from->size);
-		// Ensure that this is an array
-		lux_argcheck(state, 1, 0 < to_size);
-		// Ensure that the arrays are the same size
-		lux_argcheck(state, 2, from_size == to_size);
-		// Use OpenMP if enabled
+		// Source array to read arguments
+		auto user = Type::check(state, 1);
+		// Genuine array size
+		size = abs(user->size);
+		// Ensure this is not a pointer
+		lux_argcheck(state, 1, 0 < size);
+		// Check optional target array
+		to = Type::opt(state, 2);
+		if (!to)
+		{
+			to = new Number [size];
+			Type::push(state, to, size);
+			result = true;
+		}
+		else result = false;
+		from = user->data;
+	}
+	
+	static int exp(lua_State *state)
+	{
+		Operations args(state);
 		#pragma omp parallel for
-		for (int item = 0; item < to_size; ++item)
-			to->data[item] = std::sin(from->data[item]);
-		// No result
-		return 0;
+		for (int item = 0; item < args.size; ++item)
+			args.to[item] = std::exp(args.from[item]);
+		return args.result;
 	}
 
 	static int open(lua_State *state)
 	{
-		auto name = lua_tostring(state, 1);
-		if (!luaL_getmetatable(state, name))
+		luaL_Reg index[] =
 		{
-			return luaL_error(state, "require 'array'");
-		}
-		luaL_Reg regs[] =
-		{
-		{"sin", sin},
+		{"exp", exp},
 		{nullptr}
 		};
-		luaL_setfuncs(state, regs, 0);
-		return 1;
+		luaL_setfuncs(state, index, 0);
+		return 0;
 	}
 };
 
@@ -59,9 +67,18 @@ extern "C" int luaopen_cmath(lua_State *state)
 	{
 	{"float", Operations<float>::open},
 	{"double", Operations<double>::open},
-//	{"complex", Operations<complex<float>>::open},
-//	{"complexd", Operations<complex<double>>::open},
+	{"complex", Operations<complex<float>>::open},
+	{"complexd", Operations<complex<double>>::open},
 	{nullptr}
 	};
+	for (auto r=regs; r->name; ++r)
+	{
+		if (luaL_getmetatable(state, r->name))
+		{
+			r->func(state);
+			lua_pop(state, 1);
+		}
+	}
+	return 0;
 }
 
