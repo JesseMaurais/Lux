@@ -30,7 +30,7 @@ template <> luaL_Reg lux_Class<lconv>::index[] =
 	{nullptr}
 };
 
-extern "C" int luaopen_clocale(lua_State *state)
+extern "C" int luaopen_locale(lua_State *state)
 {
 	luaL_requiref(state, "lconv", lux_Class<lconv>::open, false);
 	luaL_Reg regs[] =

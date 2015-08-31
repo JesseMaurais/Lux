@@ -33,79 +33,59 @@ template <class User> struct lux_Array
 	// Pointer storage implementation
 	typedef lux_Store<User*> Type;
 
-	// Construct this array given a size
-	static int fromsize(lua_State *state)
-	{
-		// Argument is the array's size
-		int size = lua_tointeger(state, 1);
-		// Check that the size is valid
-		lux_argcheck(state, 1, 0 < size);
-		// Create the data for array
-		User *data = new User [size];
-		// Put the array on the stack
-		Type::push(state, data, size);
-		return 1;
-	}
-
-	// Construct this array from a table
-	static int fromtable(lua_State *state)
-	{
-		int size = luaL_len(state, 1);
-		User *data = new User [size];
-		lua_pushnil(state); // first
-		// Copy every element of the table as numeric
-		for (int item = 0; lua_next(state, 1); ++item)
-		{
-			// Convert the element to User type
-			data[item] = lux_to<User>(state, 3);
-			lua_pop(state, 1); // pop key
-		}
-		// Put the array on the stack
-		Type::push(state, data, size);
-		return 1;
-	}
-
-	/// Copy this array from another one
-	static int fromarray(lua_State *state)
-	{
-		// Create with matching size
-		int size = luaL_len(state, 1);
-		User *data = new User [size];
-		// Use the index metamethod for generality
-		for (int i = 0, j = 1; i < size; ++i, ++j)
-		{
-			lua_geti(state, 1, j);
-			data[i] = lux_to<User>(state, -1);
-			lua_pop(state, 1);
-		}
-		Type::push(state, data, size);
-		return 1;
-	}
-
 	/// Array allocation function
 	static int __new(lua_State *state)
 	{
+		User *data;
+		int size;
 		switch (lua_type(state, 1))
 		{
+		default:
+			// We only construct from these argument types
+			return luaL_argerror(state, 1, "size, table, array");
 		case LUA_TNUMBER:
-			// An array with size
-			return fromsize(state);
+			// Argument is the array's size
+			size = lua_tointeger(state, 1);
+			// Check that the size is valid
+			lux_argcheck(state, 1, 0 < size);
+			// Create its storage
+			data = new User [size];
+			break;
 		case LUA_TTABLE:
 			// Copy table contents
-			return fromtable(state);
+			size = luaL_len(state, 1);
+			data = new User [size];
+			lua_pushnil(state); // first
+			// Copy every element of the table as numeric
+			for (int item = 0; lua_next(state, 1); ++item)
+			{
+				// Convert the element to User type
+				data[item] = lux_to<User>(state, 3);
+				lua_pop(state, 1); // pop key
+			}
+			break;
 		case LUA_TUSERDATA:
 			// Copied from an array
-			return fromarray(state);
+			size = luaL_len(state, 1);
+			data = new User [size];
+			// Use the index metamethod for generality
+			for (int i = 0, j = 1; i < size; ++i, ++j)
+			{
+				lua_geti(state, 1, j);
+				data[i] = lux_to<User>(state, -1);
+				lua_pop(state, 1);
+			}
+			break;
 		};
-		// We only construct from these argument types
-		return luaL_argerror(state, 1, "size, table, array");
+		Type::push(state, data, size);
+		return 1;
 	}
 
 	/// Garbage collection callback
 	static int __gc(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		// Only owner has non-negative size
+		// Only the owner has non-negative size
 		if (0 < user->size) delete [] user->data;
 		else
 		{
@@ -426,6 +406,65 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
+	/// Determine if array is not owner
+	static int __bnot(lua_State *state)
+	{
+		Type *user = Type::check(state);
+		lua_pushboolean(state, user->size <= 0);
+		return 1;
+	}
+
+	/// Determine if this is a sub array
+	static int __band(lua_State *state)
+	{
+		// 1st array
+		Type *A = Type::check(state, 1);
+		User *A_head = A->data;
+		User *A_tail = A->data + abs(A->size);
+		// 2nd array
+		Type *B = Type::check(state, 2);
+		User *B_head = B->data;
+		User *B_tail = B->data + abs(B->size);
+		// Boundary of second fits entirely within boundary of first
+		lua_pushboolean(state, A_head <= B_head and B_tail <= A_tail);
+		return 1;
+	}
+
+	/// Determine if there is no overlap
+	static int __bxor(lua_State *state)
+	{
+		// 1st array
+		Type *A = Type::check(state, 1);
+		User *A_head = A->data;
+		User *A_tail = A->data + abs(A->size);
+		// 2nd array
+		Type *B = Type::check(state, 2);
+		User *B_head = B->data;
+		User *B_tail = B->data + abs(B->size);
+		// Head of first is beyond tail of second or the converse
+		lua_pushboolean(state, A_tail <= B_head or B_tail <= A_head);
+		return 1;
+	}
+
+	/// Determine if there is some overlap
+	static int __bor(lua_State *state)
+	{
+		// 1st array
+		Type *A = Type::check(state, 1);
+		User *A_head = A->data;
+		User *A_tail = A->data + abs(A->size);
+		// 2nd array
+		Type *B = Type::check(state, 2);
+		User *B_head = B->data;
+		User *B_tail = B->data + abs(B->size);
+		// Head of one falls within the boundary of the other
+		if (A_head <= B_head)
+			lua_pushboolean(state, B_head < A_tail);
+		else
+			lua_pushboolean(state, A_head < B_tail);
+		return 1;
+	}
+
 	/// Check equality of elements
 	static int __eq(lua_State *state)
 	{
@@ -572,14 +611,14 @@ template <class User> struct lux_Array
 		Type *user = Type::check(state, 1);
 		int size = abs(user->size);
 		// Region within array to zero the bits
-		int from = luaL_optinteger(state, 2, 1);
-		int end = luaL_optinteger(state, 3, size);
+		int begin = luaL_optinteger(state, 2, 1);
+		int end = luaL_optinteger(state, 3, size+1);
 		// Check the sanity of the region
-		lux_argcheck(state, 1, from < end);
-		size = end - from, --from;
+		lux_argcheck(state, 2, begin < end);
+		size = end - begin, --begin;
 		// Fastest standard way to zero contiguous bits
-		memset(user->data + from, 0, size*sizeof(User));
-		return 1;
+		memset(user->data + begin, 0, size*sizeof(User));
+		return 0;
 	}
 
 	/// Swap contents of two arrays
@@ -632,7 +671,7 @@ template <class User> struct lux_Array
 		if (!where) where = user;
 		--from, --end, --to;
 		size = end - from;
-		// Use memmove in case moving from and to overlap in memory
+		// Use memmove in case from and to have overlapping memory area
 		memmove(where->data + to, user->data + from, size*sizeof(User));
 		return 0;
 	}
@@ -672,8 +711,8 @@ template <class User> struct lux_Array
 	{
 		// Pull module name off the stack
 		Type::name = lua_tostring(state, 1);
-		// Go through the registry process once
-		if (luaL_newmetatable(state, Type::name))
+		// Create a metatable for array type
+		luaL_newmetatable(state, Type::name);
 		{
 			luaL_Reg regs [] =
 			{
@@ -690,9 +729,9 @@ template <class User> struct lux_Array
 			{"new", __new},
 			{"__gc", __gc},
 			{"__tostring", __tostring},
+			{"__concat", __concat},
 			{"__newindex", __newindex},
 			{"__index", __index},
-			{"__concat", __concat},
 			{"__len", __len},
 			{"__mul", __mul},
 			{"__div", __div},
@@ -701,6 +740,10 @@ template <class User> struct lux_Array
 			{"__shl", __shl},
 			{"__shr", __shr},
 			{"__unm", __unm},
+			{"__bnot", __bnot},
+			{"__band", __band},
+			{"__bxor", __bxor},
+			{"__bor", __bor},
 			{"__eq", __eq},
 			{"__lt", __lt},
 			{"__le", __le},

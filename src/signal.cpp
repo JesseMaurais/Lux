@@ -27,7 +27,7 @@ static int setup(lua_State *state)
 	return 0;
 }
 
-extern "C" int luaopen_csignal(lua_State *state)
+extern "C" int luaopen_signal(lua_State *state)
 {
 	luaL_Reg regs[] =
 	{

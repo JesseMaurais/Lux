@@ -28,7 +28,7 @@ static int _lldiv(lua_State *state)
 #define REG(reg) {#reg, lux_cast(reg)},
 #define ARG(arg) {#arg, arg},
 
-extern "C" int luaopen_cstdlib(lua_State *state)
+extern "C" int luaopen_stdlib(lua_State *state)
 {
 	luaL_Reg regs[] =
 	{

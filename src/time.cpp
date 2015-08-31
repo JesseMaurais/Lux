@@ -22,7 +22,7 @@ template <> luaL_Reg lux_Class<timespec>::index[] =
 	{nullptr}
 };
 
-extern "C" int luaopen_ctime(lua_State *state)
+extern "C" int luaopen_time(lua_State *state)
 {
 	luaL_requiref(state, "tm", lux_Class<tm>::open, false);
 //	luaL_requiref(state, "spec", lux_Class<timespec>::open, false);
@@ -40,7 +40,7 @@ extern "C" int luaopen_ctime(lua_State *state)
 	{nullptr}
 	};
 	luaL_setfuncs(state, regs, 0);
-	lux_push(state, CLOCKS_PER_SEC);
+	lua_pushinteger(state, CLOCKS_PER_SEC);
 	lua_setfield(state, -2, "CLOCKS_PER_SEC");
 	return 1;
 }

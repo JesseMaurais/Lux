@@ -3,7 +3,7 @@
 
 #define REG(fun) {#fun, lux_cast(fun)},
 
-extern "C" int luaopen_cstdio(lua_State *state)
+extern "C" int luaopen_stdio(lua_State *state)
 {
 	luaL_Reg regs[] =
 	{

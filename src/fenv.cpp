@@ -2,7 +2,7 @@
 #include <cfloat>
 #include <cfenv>
 
-extern "C" int luaopen_cfenv(lua_State *state)
+extern "C" int luaopen_fenv(lua_State *state)
 {
 	luaL_requiref(state, "fenv", lux_Class<fenv_t>::open, false);
 
