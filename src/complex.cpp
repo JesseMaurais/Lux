@@ -80,11 +80,11 @@ template <class Real> struct lux_Complex
 	static int __tostring(lua_State *state)
 	{
 		auto &data = obj(state);
-		double re = data.real();
-		double im = data.imag();
+		double real = data.real();
+		double imag = data.imag();
 		static char string[128];
 		// C stdio has precision flags
-		sprintf(string, "%gi%+g", im, re);
+		sprintf(string, "%gi%+g", imag, real);
 		lua_pushstring(state, string);
 		return 1;
 	}
@@ -304,14 +304,19 @@ extern "C" int luaopen_complex(lua_State *state)
 {
 	luaL_Reg regs[] =
 	{
-	{"complex", lux_Complex<float>::open},
-	{"complexd", lux_Complex<double>::open},
+	{"float", lux_Complex<float>::open},
+	{"double", lux_Complex<double>::open},
 	{nullptr}
 	};
 	for (auto r=regs; r->name; ++r)
 	{
-	 luaL_requiref(state, r->name, r->func, true);
-	 lua_pop(state, 1);
+	 if (luaL_getmetatable(state, r->name))
+	 {
+	 	r->func(state); // Complex<Real>::open(state)
+	 	lua_setfield(state, -2, "complex");
+	 	lua_pop(state, 1);
+	 }
+	 else return luaL_error(state, "must require 'array'");
 	}
 	return 0;
 }
