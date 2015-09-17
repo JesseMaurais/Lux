@@ -21,6 +21,7 @@
 
 #include "lxalloc.hpp"
 #include <typeinfo>
+#include <utility>
 #include <cstdlib>
 #include <cassert>
 
@@ -39,6 +40,11 @@ template <class User> struct lux_Pack : lux_Type<User>
 	User data;
 
 	lux_Pack(void) = default;
+
+	lux_Pack(User &&data)
+	{
+		this->data = std::move(data);
+	}
 
 	lux_Pack(User &data)
 	{
@@ -111,9 +117,25 @@ template <class User> struct lux_Store : lux_Pack<User>
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User data, int size=0)
+	static Type *push(lua_State *state, User &data, int size=0)
 	{
 		auto user = new (state) Type(data);
+		luaL_setmetatable(state, Type::name);
+		return user;
+	}
+
+	/// Create storage for user data and put it on the stack
+	static Type *push(lua_State *state, User &&data, int size=0)
+	{
+		auto user = new (state) Type(data);
+		luaL_setmetatable(state, Type::name);
+		return user;
+	}
+
+	/// Create storage and user data
+	static Type *push(lua_State *state)
+	{
+		auto user = new (state) Type;
 		luaL_setmetatable(state, Type::name);
 		return user;
 	}
@@ -173,6 +195,15 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 		}
 		lua_pushnil(state);
 		return nullptr;
+	}
+
+	/// Create storage and user data
+	static Type *push(lua_State *state, int size=1)
+	{
+		auto data = new User [size];
+		auto user = new (state) Type(data, size);
+		luaL_setmetatable(state, Type::name);
+		return user;
 	}
 
 	/// Return data if types match or the given default

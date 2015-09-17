@@ -316,7 +316,7 @@ extern "C" int luaopen_complex(lua_State *state)
 	 	lua_setfield(state, -2, "complex");
 	 	lua_pop(state, 1);
 	 }
-	 else return luaL_error(state, "must require 'array'");
+	 else return luaL_error(state, "Must require 'array'");
 	}
 	return 0;
 }
