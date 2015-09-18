@@ -9,7 +9,7 @@ extern "C" int luaopen_stdio(lua_State *state)
 	{
 	REG(clearerr)
 	REG(ctermid)
-//	REG(cuserid)
+	REG(cuserid)
 	REG(fclose)
 	REG(fdopen)
 	REG(feof)

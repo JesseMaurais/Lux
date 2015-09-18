@@ -5,7 +5,7 @@ thread = require'thread'
 
 function square(arg)
 	x = arg:get()
-	print(x*x)
+	print('The square is:', x*x)
 end
 
 promise = thread.promise.new()

@@ -68,21 +68,21 @@ struct Thread
 
 	static int join(lua_State *state)
 	{
-		// Join this with caller
+		// Join with caller
 		Type::to(state).join();
 		return 0;
 	}
 
 	static int detach(lua_State *state)
 	{
-		// Make thread unjoinable
+		// Make unjoinable
 		Type::to(state).detach();
 		return 0;
 	}
 
 	static int joinable(lua_State *state)
 	{
-		// Query the detached state of this thread
+		// Query attached/detached state
 		bool joinable = Type::to(state).joinable();
 		lua_pushboolean(state, joinable);
 		return 1;
@@ -131,9 +131,8 @@ struct Mutex
 
 	static int __new(lua_State *state)
 	{
-		new (state) Type;
-		// Set metatable for __gc and others
-		luaL_setmetatable(state, Type::name);
+		// Default new
+		Type::push(state);
 		return 1;
 	}
 
@@ -161,12 +160,12 @@ struct Mutex
 
 	static int unlock(lua_State *state)
 	{
-		// Unlock a locked mutex
+		// Unlock when locked
 		Type::to(state).unlock();
 		return 0;
 	}
 
-	static int try_lock(lua_State *state)
+	static int trylock(lua_State *state)
 	{
 		// Do not block if a lock cannot be made
 		bool locked = Type::to(state).try_lock();
@@ -195,7 +194,7 @@ struct Mutex
 		{
 		{"lock", lock},
 		{"unlock", unlock},
-		{"try_lock", try_lock},
+		{"trylock", trylock},
 		{nullptr}
 		};
 
@@ -214,9 +213,8 @@ struct Condition
 
 	static int __new(lua_State *state)
 	{
-		new (state) Type;
-		// Set metatable for __gc and others
-		luaL_setmetatable(state, Type::name);
+		// Default new
+		Type::push(state);
 		return 1;
 	}
 
@@ -237,23 +235,23 @@ struct Condition
 
 	static int wait(lua_State *state)
 	{
-		auto user = Type::check(state, 1);
-		auto mutex = Mutex::Type::check(state, 2);
-		// Block until condition notify
-		user->data.wait(mutex->data);
+		auto &condition = Type::to(state, 1);
+		auto &mutex = Mutex::Type::to(state, 2);
+		// Block until notified
+		condition.wait(mutex);
 		return 0;
 	}
 
 	static int notify(lua_State *state)
 	{
-		// Resume one blocked thread
+		// Resume one waiting thread
 		Type::to(state).notify_one();
 		return 0;
 	}
 
 	static int broadcast(lua_State *state)
 	{
-		// Resume all blocked threads
+		// Resume all waiting threads
 		Type::to(state).notify_all();
 		return 0;
 	}
@@ -304,12 +302,8 @@ struct Future
 		// Move arguments to stack
 		int top = lua_gettop(state);
 		lua_xmove(state, stack, top);
-		// Create a default future
-		auto user = new (state) Type;
-		luaL_setmetatable(state, Type::name);
-		// Start with asynchronous execution
-		user->data = std::async(call, stack);
-		// Done
+		// Create with asynchronous execution
+		Type::push(state, std::async(call, stack));
 		return 1;
 	}
 
@@ -340,7 +334,7 @@ struct Future
 
 	static int wait(lua_State *state)
 	{
-		// Block until ready
+		// Block until notified
 		Type::to(state).wait();
 		return 0;
 	}
@@ -384,9 +378,8 @@ struct Promise
 
 	static int __new(lua_State *state)
 	{
-		new (state) Type;
-		// Set metatable for __gc and others
-		luaL_setmetatable(state, Type::name);
+		// Default new
+		Type::push(state);
 		return 1;
 	}
 
@@ -407,26 +400,23 @@ struct Promise
 
 	static int get(lua_State *state)
 	{
-		auto user = new (state) Future::Type;
-		// Set metatable for __gc and others
-		luaL_setmetatable(state, Future::Type::name);
 		// Engage with the future using this promise
-		user->data = Type::to(state).get_future();
+		Future::Type::push(state, Type::to(state).get_future());
 		return 1;
 	}
 
 	static int set(lua_State *state)
 	{
-		auto user = Type::check(state);
+		auto &data = Type::to(state);
 		// Create an independent execution stack
 		lua_State *stack = lua_newthread(state);
-		lua_remove(state, 1); // user
+		lua_remove(state, 1); // data
 		lua_pop(state, 1); // stack
 		// Move arguments to stack
 		int top = lua_gettop(state);
 		lua_xmove(state, stack, top);
 		// Ready it in shared state
-		user->data.set_value(stack);
+		data.set_value(stack);
 		return 0;
 	}
 

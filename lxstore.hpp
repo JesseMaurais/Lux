@@ -48,7 +48,7 @@ template <class User> struct lux_Pack : lux_Type<User>
 
 	lux_Pack(User &data)
 	{
-		this->data = data;
+		this->data = std::move(data);
 	}
 };
 

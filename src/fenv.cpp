@@ -48,7 +48,7 @@ extern "C" int luaopen_fenv(lua_State *state)
 	{"FLT_MIN_EXP", FLT_MIN_EXP},
 	{"DBL_MIN_EXP", DBL_MIN_EXP},
 	{"LDBL_MIN_EXP", LDBL_MIN_EXP},
-	{"FLT_MIN_1O_EXP", FLT_MIN_10_EXP},
+	{"FLT_MIN_10_EXP", FLT_MIN_10_EXP},
 	{"DBL_MIN_10_EXP", DBL_MIN_10_EXP},
 	{"LDBL_MIN_10_EXP", LDBL_MIN_10_EXP},
 	{"FLT_MAX_EXP", FLT_MAX_EXP},

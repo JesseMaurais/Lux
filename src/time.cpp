@@ -24,8 +24,6 @@ template <> luaL_Reg lux_Class<timespec>::index[] =
 
 extern "C" int luaopen_time(lua_State *state)
 {
-	luaL_requiref(state, "tm", lux_Class<tm>::open, false);
-//	luaL_requiref(state, "spec", lux_Class<timespec>::open, false);
 	luaL_Reg regs[] =
 	{
 	{"clock", lux_cast(clock)},
