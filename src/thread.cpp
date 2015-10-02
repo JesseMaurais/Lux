@@ -59,6 +59,14 @@ struct Thread
 		return 1;
 	}
 
+	static int concurrency(lua_State *state)
+	{
+		// Number of hardware supported thread contexts
+		size_t size = std::thread::hardware_concurrency();
+		lua_pushinteger(state, size);
+		return 1;
+	}
+
 	static int yield(lua_State *state)
 	{
 		// Always current thread
@@ -99,6 +107,10 @@ struct Thread
 
 		lua_pushliteral(state, "yield");
 		lua_pushcfunction(state, yield);
+		lua_settable(state, -3);
+
+		lua_pushliteral(state, "concurrency");
+		lua_pushcfunction(state, concurrency);
 		lua_settable(state, -3);
 
 		lua_pushliteral(state, "__gc");

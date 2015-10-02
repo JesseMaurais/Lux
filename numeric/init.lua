@@ -6,23 +6,37 @@ require'array'
 require'complex'
 require'numeric.blas'
 
-function matrix(array, rows, cols, stride)
+local Module = {}
+local Vector = {}
+local Matrix = {}
+
+function Vector.nrm2(this)
+	return getmetatable(this.array).nrm2(this.dim, this.array, this.inc)
+end
+
+function Module.vector(array, dim, inc) 
+	local table = {}
+	-- Create a BLAS/LAPCK vector from an array
+	if type(array) == 'table' then
+		-- Assume it's an array's metatable
+		table.array = array.new(dim)
+		table.dim = dim
+		table.inc = 1
+	else
+		-- Assume it's an actual array
+	end 
+	-- 
+	return setmetatable(table, Vector)
+end
+
+function Module.matrix(array, rows, cols, stride)
 	-- Create a BLAS/LAPACK matrix from an array
 	if type(array) == 'table' then
 		-- Assume it's an array's metatable
-		if rows and cols then
-			array = array.new(rows*cols)
-		else
-			error('must provide both rows and columns')
-		end
 	else
 		-- Assume it's an actual array
-		size = #array
-		if cols == nil then
-			if rows then
-				cols = size/rows
-			end
-		end
 	end
 end
+
+return Module
 
