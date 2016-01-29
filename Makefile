@@ -1,28 +1,21 @@
 CC=g++
-CFLAGS=-std=c++11
-SRC=lux.hpp lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxchars.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxerror.hpp lxtools.hpp
-OBJ=array.so complex.so fcntl.so fenv.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
-DIR=numeric
+CFLAGS=-std=c++11 -I/usr/include/lua5.3
+SRC=lux.hpp lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxchars.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxdebug.hpp lxerror.hpp lxtools.hpp
+OBJ=array.so blas.so complex.so fcntl.so fenv.so lapack.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
 
-.EXPORT_ALL_VARIABLES:
-.PHONY: $(DIR)
-
-all: $(OBJ) $(DIR)
+all: $(OBJ)
 
 clean:
 	rm $(OBJ)
-	for dir in $(DIR); do $(MAKE) -C $$dir clean; done
 
 install: $(SRC)
 	mkdir -p /usr/local/include/lux
 	cp -t /usr/local/include/lux $(SRC)
+	lua install.lua $(OBJ)
 
 uninstall:
 	rm /usr/local/include/lux/*
 	rmdir /usr/local/include/lux
-
-$(DIR):
-	$(MAKE) -C $@
 
 %.so: src/%.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
@@ -38,4 +31,10 @@ mqueue.so: src/mqueue.cpp $(SRC)
 
 time.so: src/time.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lrt
+
+blas.so: src/blas.cpp src/cblas.hpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lblas
+
+lapack.so: src/lapack.cpp src/lapacke.hpp $(SRC)
+	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llapacke
 

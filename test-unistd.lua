@@ -2,8 +2,8 @@ print "Test the modules for POSIX and C standard libraries"
 
 array = require'array'
 uni = require'unistd'
-io = require'cstdio'
-std = require'cstdlib'
+io = require'stdio'
+std = require'stdlib'
 
 str = char.new(io.FILENAME_MAX)
 

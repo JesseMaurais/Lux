@@ -6,7 +6,7 @@
 #include "lux.hpp"
 #include <mqueue.h>
 
-static int open(lua_State *state)
+static int l_open(lua_State *state)
 {
 	const mqd_t invalid = (mqd_t) -1;
 	mqd_t mq = mq_open(lua_tostring(state, 1), lua_tointeger(state, 2));
@@ -15,14 +15,14 @@ static int open(lua_State *state)
 	return 1;
 }
 
-static int close(lua_State *state)
+static int l_close(lua_State *state)
 {
 	mqd_t mq = lux_to<mqd_t>(state, 1);
 	if (mq_close(mq) < 0) return lux_perror(state);
 	return 0;
 }
 
-static int send(lua_State *state)
+static int l_send(lua_State *state)
 {
 	mqd_t mq = lux_to<mqd_t>(state, 1);
 	size_t len;
@@ -32,7 +32,7 @@ static int send(lua_State *state)
 	return 0;
 }
 
-static int receive(lua_State *state)
+static int l_receive(lua_State *state)
 {
 	mqd_t mq = lux_to<mqd_t>(state, 1);
 	size_t len = luaL_optinteger(state, 2, FILENAME_MAX);
@@ -44,7 +44,7 @@ static int receive(lua_State *state)
 	return 2;
 }
 
-static int unlink(lua_State *state)
+static int l_unlink(lua_State *state)
 {
 	if (mq_unlink(lua_tostring(state, 1)) < 0) return lux_perror(state);
 	return 0;
@@ -59,7 +59,7 @@ template <> luaL_Reg lux_Class<mq_attr>::index[] =
 	nullptr
 	};
 
-static int getattr(lua_State *state)
+static int l_getattr(lua_State *state)
 {
 	mqd_t mq = lux_to<mqd_t>(state, 1);
 	mq_attr *attr = lux_to<mq_attr*>(state, 2);
@@ -67,7 +67,7 @@ static int getattr(lua_State *state)
 	return 0;
 }
 
-static int setattr(lua_State *state)
+static int l_setattr(lua_State *state)
 {
 	mqd_t mq = lux_to<mqd_t>(state, 1);
 	mq_attr *attr = lux_to<mq_attr*>(state, 2);
@@ -82,13 +82,13 @@ extern "C" int luaopen_mqueue(lua_State *state)
 	{
 		luaL_Reg regs[] =
 		{
-		{"open", open},
-		{"close", close},
-		{"send", send},
-		{"receive", receive},
-		{"unlink", unlink},
-		{"setattr", setattr},
-		{"getattr", getattr},
+		{"open", l_open},
+		{"close", l_close},
+		{"send", l_send},
+		{"receive", l_receive},
+		{"unlink", l_unlink},
+		{"setattr", l_setattr},
+		{"getattr", l_getattr},
 		nullptr
 		};
 		luaL_setfuncs(state, regs, 0);

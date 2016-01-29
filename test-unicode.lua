@@ -1,6 +1,6 @@
 print "Test the encoding/decoding of Unicode strings in arrays"
 
-LC = require 'clocale'
+LC = require 'locale'
 require 'array'
 
 LC.setlocale(LC.ALL, "en_CA.UTF-8") -- affects encoding behaviour

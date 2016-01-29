@@ -28,9 +28,3 @@ for x = 1, #b do
 end
 print('b = ' .. tostring(b))
 
-print 'Strings are decoded according to the locale'
-
-c = char.new('Hello World!\n')
-char.puts(c) -- text form
-print('code points = ' .. tostring(c))
-

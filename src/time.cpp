@@ -208,32 +208,18 @@ extern "C" int luaopen_time(lua_State *state)
 	{"gmtime", l_gmtime},
 	{"localtime", l_localtime},
 	{"strftime", l_strftime},
+	{"clock_getcpuclockid", l_clock_getcpuclockid},
+	{"clock_getres", l_clock_getres},
+	{"clock_gettime", l_clock_gettime},
+	{"clock_settime", l_clock_settime},
+	{"timer_create", l_timer_create},
+	{"timer_delete", l_timer_delete},
+	{"timer_getoverrun", l_timer_getoverrun},
+	{"timer_gettime", l_timer_gettime},
+	{"timer_settime", l_timer_settime},
 	{nullptr}
 	};
 	luaL_newlib(state, regs);
-
-	luaL_Reg clock[] =
-	{
-	{"getcpuclockid", l_clock_getcpuclockid},
-	{"getres", l_clock_getres},
-	{"gettime", l_clock_gettime},
-	{"settime", l_clock_settime},
-	{nullptr}
-	};
-	luaL_newlib(state, clock);
-	lua_setfield(state, -2, "clock");
-
-	luaL_Reg timer[] =
-	{
-	{"create", l_timer_create},
-	{"delete", l_timer_delete},
-	{"getoverrun", l_timer_getoverrun},
-	{"gettime", l_timer_gettime},
-	{"settime", l_timer_settime},
-	{nullptr}
-	};
-	luaL_newlib(state, timer);
-	lua_setfield(state, -2, "timer");
 
 	lux_Reg<lua_Integer> args[] =
 	{

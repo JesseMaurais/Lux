@@ -56,7 +56,7 @@ struct Regex
 		// Number of optional arguments
 		int top = lua_gettop(state);
 		// Convert strings into flags
-		syntax_option_type type = 0;
+		syntax_option_type type;
 		for (int arg = 2; arg < top; ++arg)
 			type |= optsyntax(state, arg);
 		// Construct the regex object with given arguments
@@ -94,7 +94,7 @@ struct Regex
 		// Number of optional arguments
 		int top = lua_gettop(state);
 		// Convert strings to flags
-		match_flag_type type = 0;
+		match_flag_type type;
 		for (int arg = 3; arg < top; ++arg)
 			type |= optmatch(state, arg);
 		// Call the regex match function with given flags
@@ -110,7 +110,7 @@ struct Regex
 		// Number of optional arguments
 		int top = lua_gettop(state);
 		// Convert strings to flags
-		match_flag_type type = 0;
+		match_flag_type type;
 		for (int arg = 3; arg < top; ++arg)
 			type |= optmatch(state, arg);
 		// Call the regex search function with given flags

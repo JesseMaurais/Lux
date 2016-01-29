@@ -6,5 +6,6 @@
 #include "lxarray.hpp"
 #include "lxclass.hpp"
 #include "lxbuffs.hpp"
+#include "lxdebug.hpp"
 #include "lxerror.hpp"
 #include "lxtools.hpp"

@@ -99,17 +99,14 @@ template <class User> struct lux_Class
 	static int member(lua_State *state, Base User::*field)
 	{
 		User *data = lux_to<User*>(state, 1);
-		// Write if argument given
+		// Always return previous/current value
+		lux_push<Base>(state, data->*field);
+		// Change if argument given
 		if (lua_gettop(state) > 1)
 		{
 		 data->*field = lux_to<Base>(state, 2);
-		 return 0;
 		}
-		else // Read
-		{
-		 lux_push<Base>(state, data->*field);
-		 return 1;
-		}
+		return 1;
 	}
 
 	/// Loader compatible with luaL_requiref
@@ -138,6 +135,12 @@ template <class User> struct lux_Class
 			}
 		}
 		return 1;
+	}
+
+	/// Require-like function joining 'name' and 'open'
+	static void require(lua_State *state, bool global=false)
+	{
+		luaL_requiref(state, Type::name, open, global);
 	}
 
 	/// Class methods index
