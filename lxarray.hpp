@@ -11,10 +11,7 @@
  * reflected automatically in the other. Memory is properly reference counted
  * in this case to avoid segfaults. Raw pointers are implemented in this same
  * metatable but the array functions are not. Pointers are supported only for
- * system related functions. Finally, arrays can store character data just as
- * C does it, only that arrays implicitly support multibyte decoding assuming
- * the input is in the Unicode transformation format. Lua strings are decoded
- * this way to the bit width of the array type. 
+ * system related functions. 
  *
  * See lxstore.hpp for the storage classes and lxchars.hpp for char decoding.
  * See array.cpp for the C++ source code that compiles into the array module. 
@@ -69,12 +66,17 @@ template <class User> struct lux_Array
 			size = luaL_len(state, 1);
 			data = new User [size];
 			// Use the index metamethod for generality
-			for (int i = 0, j = 1; i < size; ++i, ++j)
+			for (int i = 0, j = 1; i < size; i = j++)
 			{
 				lua_geti(state, 1, j);
 				data[i] = lux_to<User>(state, -1);
 				lua_pop(state, 1);
 			}
+			break;
+		case LUA_TLIGHTUSERDATA:
+			// Implicit conversion from a raw pointer
+			data = static_cast<User*>(lua_touserdata(state, 1));
+			size = 0;
 			break;
 		};
 		Type::push(state, data, size);
@@ -385,24 +387,10 @@ template <class User> struct lux_Array
 		return 1;
 	}
 
-	/// Reverse elements in the array
+	/// Convert to a raw pointer
 	static int __unm(lua_State *state)
 	{
-		Type *user = Type::check(state);
-		// Pointers not supported
-		int size = abs(user->size);
-		lux_argcheck(state, 1, 0 < size);
-		// Half size of array
-		int half = size >> 1;
-		User temp; // for swap element
-		for (int i = 0, j = size - 1; i < j; ++i, --j)
-		{
-			temp = user->data[i];
-			user->data[i] = user->data[j];
-			user->data[j] = temp;
-		}
-		// Return a reference
-		lua_pushvalue(state, 1);
+		lua_pushlightuserdata(state, Type::to(state));
 		return 1;
 	}
 
