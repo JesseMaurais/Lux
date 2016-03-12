@@ -28,3 +28,13 @@ for x = 1, #b do
 end
 print('b = ' .. tostring(b))
 
+print 'Let\'s do some UTF-8 string encoding'
+
+-- This only works for supported locales
+LC = require'locale'
+LC.setlocale(LC.CTYPE, "en_CA.UTF-8")
+-- These are Unicode code points in hexadecimal form (must be null terminated)
+s = int.new{0x3BC,0x3B1,0x3B8,0x3B7,0x3BC,0x3B1,0x3C4,0x3B9,0x3BA,0x3AC,0}
+-- It's up to your terminal to display this properly
+print(int.encode(s))
+

@@ -91,9 +91,9 @@ template <class User> struct lux_Array
 		if (0 < user->size) delete [] user->data;
 		else
 		{
-		luaL_getmetatable(state, Type::name);
-		// Free reference to the data owner
-		luaL_unref(state, -1, user->ref);
+			luaL_getmetatable(state, Type::name);
+			// Free reference to the data owner
+			luaL_unref(state, -1, user->ref);
 		}
 		return 0;
 	}
@@ -117,13 +117,13 @@ template <class User> struct lux_Array
 		int index = luaL_checkinteger(state, 2);
 		if (0 < index and index <= size)
 		{
-		// Arrays are indexed from 1, not 0
-		lux_push(state, user->data[--index]);
+			// Arrays are indexed from 1, not 0
+			lux_push(state, user->data[--index]);
 		}
 		else
 		{
-		// By convention
-		lua_pushnil(state);
+			// By convention
+			lua_pushnil(state);
 		}
 		return 1;
 	}
@@ -139,13 +139,8 @@ template <class User> struct lux_Array
 		int index = luaL_checkinteger(state, 2);
 		if (0 < index and index <= size)
 		{
-		// Arrays are indexed from 1 rather than 0
-		user->data[--index] = lux_to<User>(state, 3);
-		}
-		else
-		{
-		// Report error to the interpreter so it can do a stack trace
-		luaL_error(state, "assignment to %d is out of bounds", index);
+			// Arrays are indexed from 1 rather than 0
+			user->data[--index] = lux_to<User>(state, 3);
 		}
 		return 0;
 	}

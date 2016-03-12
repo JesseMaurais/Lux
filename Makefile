@@ -11,7 +11,6 @@ clean:
 install: $(SRC)
 	mkdir -p /usr/local/include/lux
 	cp -t /usr/local/include/lux $(SRC)
-	lua install.lua $(OBJ)
 
 uninstall:
 	rm /usr/local/include/lux/*
