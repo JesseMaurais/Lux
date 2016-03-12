@@ -1,6 +1,3 @@
-Monday July 24, 2015
-Jesse Maurais
-
 Lux is an emitting C++ glue for Lua. By 'emitting' I mean that it exploits a
 C++ feature in which the compiler emits functions at compile time. This happens
 whenever a templated function recieves a new argument type. Using this feature,

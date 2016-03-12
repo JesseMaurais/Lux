@@ -4,7 +4,7 @@
 // Put library prefix in the table, omit in name
 #define REG(reg) {#reg, lux_cast(LAPACKE_##reg)}
 
-extern "C" int luaopen_numeric_lapack(lua_State *state)
+extern "C" int luaopen_lapack(lua_State *state)
 {
 	luaL_Reg regs[] =
 	{

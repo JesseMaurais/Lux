@@ -1,20 +1,11 @@
 CC=g++
-CFLAGS=-std=c++11 -I/usr/include/lua5.3
-SRC=lux.hpp lxalloc.hpp lxstore.hpp lxstack.hpp lxthunk.hpp lxchars.hpp lxarray.hpp lxclass.hpp lxbuffs.hpp lxdebug.hpp lxerror.hpp lxtools.hpp
+CFLAGS=-std=c++11
 OBJ=array.so blas.so complex.so fcntl.so fenv.so lapack.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
 
 all: $(OBJ)
 
 clean:
 	rm $(OBJ)
-
-install: $(SRC)
-	mkdir -p /usr/local/include/lux
-	cp -t /usr/local/include/lux $(SRC)
-
-uninstall:
-	rm /usr/local/include/lux/*
-	rmdir /usr/local/include/lux
 
 %.so: src/%.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<

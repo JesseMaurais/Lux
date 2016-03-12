@@ -216,7 +216,7 @@ template <> luaL_Reg CBLAS<complex<double>>::regs[] =
 
 // Lua module entry point
 
-extern "C" int luaopen_numeric_blas(lua_State *state)
+extern "C" int luaopen_blas(lua_State *state)
 {
 	CBLAS<float>::open(state);	
 	CBLAS<double>::open(state);
