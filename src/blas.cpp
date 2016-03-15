@@ -6,30 +6,15 @@
 #include "lux.hpp"
 #include "cblas.hpp"
 
-template <class number> struct CBLAS
+extern "C" int luaopen_blas(lua_State *state)
 {
-	typedef lux_Store<number*> Type;
-
-	static int open(lua_State *state)
+	luaL_Reg regs[] =
 	{
-		if (luaL_getmetatable(state, Type::name))
-		{
-			luaL_setfuncs(state, regs, 0);
-			lua_pop(state, 1);
-			return 0;
-		}
-		return luaL_error(state, "must require arrays first");
-	}
 
-	static luaL_Reg regs[];
-};
+	// SINGLE PRECISION FLOAT
 
-// SINGLE PRECISION FLOAT
+	#define S(reg) {"s" #reg, lux_cast(reg<float>)},
 
-#define S(reg) {#reg, lux_cast(reg<float>)},
-
-template <> luaL_Reg CBLAS<float>::regs[] =
-{
 	// level 1
 	S(dot)
 	S(nrm2)
@@ -67,16 +52,11 @@ template <> luaL_Reg CBLAS<float>::regs[] =
 	S(syr2k)
 	S(trmm)
 	S(trsm)
-	// end
-	{nullptr}
-};
 
-// DOUBLE PRECISION FLOAT
+	// DOUBLE PRECISION FLOAT
 
-#define D(reg) {#reg, lux_cast(reg<double>)},
+	#define D(reg) {"d" #reg, lux_cast(reg<double>)},
 
-template <> luaL_Reg CBLAS<double>::regs[] =
-{
 	// level 1
 	D(dot)
 	D(nrm2)
@@ -114,21 +94,16 @@ template <> luaL_Reg CBLAS<double>::regs[] =
 	D(syr2k)
 	D(trmm)
 	D(trsm)
-	// end
-	{nullptr}
-};
 
-// SINGLE PRECISION COMPLEX
+	// SINGLE PRECISION COMPLEX
 
-#define C(reg) {#reg, lux_cast(reg<complex<float>>)},
+	#define C(reg) {"c" #reg, lux_cast(reg<complex<float>>)},
 
-template <> luaL_Reg CBLAS<complex<float>>::regs[] =
-{
 	// level 1
 	C(dotu)
 	C(dotc)
-	{"nrm2", lux_cast((nrm2<complex<float>, float>))},
-	{"asum", lux_cast((asum<complex<float>, float>))},
+	{"cnrm2", lux_cast((nrm2<complex<float>, float>))},
+	{"casum", lux_cast((asum<complex<float>, float>))},
 	C(iamax)
 	C(swap)
 	C(copy)
@@ -148,8 +123,8 @@ template <> luaL_Reg CBLAS<complex<float>>::regs[] =
 	C(hpmv)
 	C(geru)
 	C(gerc)
-	{"her", lux_cast(her<float>)},
-	{"hpr", lux_cast(hpr<float>)},
+	{"cher", lux_cast(her<float>)},
+	{"chpr", lux_cast(hpr<float>)},
 	C(her2)
 	C(hpr2)
 	// level 3
@@ -157,26 +132,21 @@ template <> luaL_Reg CBLAS<complex<float>>::regs[] =
 	C(symm)
 	C(hemm)
 	C(syrk)
-	{"herk", lux_cast(herk<float>)},
+	{"cherk", lux_cast(herk<float>)},
 	C(syr2k)
-	{"her2k", lux_cast(her2k<float>)},
+	{"cher2k", lux_cast(her2k<float>)},
 	C(trmm)
 	C(trsm)
-	// end
-	{nullptr}
-};
 
-// DOUBLE PRECISION COMPLEX
+	// DOUBLE PRECISION COMPLEX
 
-#define Z(reg) {#reg, lux_cast(reg<complex<double>>)},
+	#define Z(reg) {"z" #reg, lux_cast(reg<complex<double>>)},
 
-template <> luaL_Reg CBLAS<complex<double>>::regs[] =
-{
 	// level 1
 	Z(dotu)
 	Z(dotc)
-	{"nrm2", lux_cast((nrm2<complex<double>, double>))},
-	{"asum", lux_cast((asum<complex<double>, double>))},
+	{"znrm2", lux_cast((nrm2<complex<double>, double>))},
+	{"zasum", lux_cast((asum<complex<double>, double>))},
 	Z(iamax)
 	Z(swap)
 	Z(copy)
@@ -196,8 +166,8 @@ template <> luaL_Reg CBLAS<complex<double>>::regs[] =
 	Z(hpmv)
 	Z(geru)
 	Z(gerc)
-	{"her", lux_cast(her<double>)},
-	{"hpr", lux_cast(hpr<double>)},
+	{"zher", lux_cast(her<double>)},
+	{"zhpr", lux_cast(hpr<double>)},
 	Z(her2)
 	Z(hpr2)
 	// level 3
@@ -205,23 +175,18 @@ template <> luaL_Reg CBLAS<complex<double>>::regs[] =
 	Z(symm)
 	Z(hemm)
 	Z(syrk)
-	{"herk", lux_cast(herk<double>)},
+	{"zherk", lux_cast(herk<double>)},
 	Z(syr2k)
-	{"her2k", lux_cast(her2k<double>)},
+	{"zher2k", lux_cast(her2k<double>)},
 	Z(trmm)
 	Z(trsm)
-	// end
+
+	// DONE
+
 	{nullptr}
-};
+	};
 
-// Lua module entry point
-
-extern "C" int luaopen_blas(lua_State *state)
-{
-	CBLAS<float>::open(state);	
-	CBLAS<double>::open(state);
-	CBLAS<complex<float>>::open(state);
-	CBLAS<complex<double>>::open(state);
-	return 0;
+	luaL_newlib(state, regs);
+	return 1;
 }
 

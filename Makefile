@@ -7,6 +7,14 @@ all: $(OBJ)
 clean:
 	rm $(OBJ)
 
+install:
+	mkdir /usr/local/include/lux
+	cp -t /usr/local/include/lux src/*.hpp
+
+uninstall:
+	rm /usr/local/include/lux/*
+	rmdir /usr/local/include/lux
+
 %.so: src/%.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
 
