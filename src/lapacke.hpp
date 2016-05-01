@@ -33,7 +33,7 @@ template <class number>
 int ppsv(const char order, const char uplo, const int N, const int M, number *AP, number *B, const int LDB);
 template <class number>
 int pbsv(const char order, const char uplo, const int N, const int KD, const int M, number *AB, const int LDAB, number *B, const int LDB);
-template <class number, class scalar>
+template <class number, class scalar=number>
 int ptsv(const char order, const int N, const int M, scalar *D, number *E, number *B, const int LDB);
 template <class number> 
 int sysv(const char order, const char uplo, const int N, const int M, number *A, const int LDA, int *IPIV, number *B, const int LDB);
@@ -50,14 +50,14 @@ int hpsv(const char order, const char uplo, const int N, const int M, number *AP
 // s, d, c, z
 template <class number>
 int gels(const char order, const char trans, const int K, const int N, const int M, number *A, const int LDA, number *B, const int LDB);
-template <class number, class scalar>
+template <class number, class scalar=number>
 int gelsy(const char order, const int K, const int N, const int M, number *A, const int LDA, number *B, const int LDB, int *JPVT, scalar r, int *rank);
-template <class number, class scalar>
+template <class number, class scalar=number>
 int gelss(const char order, const int K, const int N, const int M, number *A, const int LDA, number *B, const int LDB, scalar *S, scalar r, int *rank);
-template <class number, class scalar>
+template <class number, class scalar=number>
 int gelsd(const char order, const int K, const int N, const int M, number *A, const int LDA, number *B, const int LDB, scalar *S, scalar r, int *rank);
 
-// GENERALISED LINEAR LEAST SQUARES
+// GENERALIZED LINEAR LEAST SQUARES
 
 // s, d, c, z
 template <class number>
@@ -69,12 +69,12 @@ int ggglm(const char order, const int N, const int M, const int P, number *A, co
 
 // s, d, c, z
 template <class number>
-int gesvd(const char order, const int N, const int M, number *A, const int LDA, int *IPIV, number *B, const int LDB);
-// s, d
-template <class number>
 int gees(const char order, const char job, const char sort, const int N, number *A, const int LDA, int *DIM, number *WR, number *WI, number *VS, const int LDVS);
 template <class number>
 int geev(const char order, const char jobVL, const char jobVR, const int N, number *A, const int LDA, number *WR, number *WI, number *VL, const int LDVL, number *VR, const int LDVR);
+template <class number>
+int gesvd(const char order, const int N, const int M, number *A, const int LDA, int *IPIV, number *B, const int LDB);
+// s, d
 template <class number>
 int syev(const char order, const char job, const char uplo, const int N, number *A, const int LDA, number *W);
 template <class number>
@@ -85,16 +85,43 @@ template <class number>
 int stev(const char order, const char job, const int N, number *D, number *E, number *Z, const int LDZ);
 // c, z
 template <class number>
-int gees(const char order, const char job, const char sort, const int N, number *A, const int LDA, int *DIM, number *W, number *VS, const int LDVS);
-template <class number>
-int geev(const char order, const char jobVL, const char jobVR, const int N, number *A, const int LDA, number *W, number *VL, const int LDVL, number *VR, const int LDVR);
-template <class number>
 int heev(const char order, const char job, const char uplo, const int N, complex<number> *A, const int LDA, number *W);
 template <class number>
 int hpev(const char order, const char job, const char uplo, const int N, complex<number> *AP, number *W, complex<number> *Z, const int LDZ);
 template <class number>
 int hbev(const char order, const char job, const char uplo, const int N, const int KD, complex<number> *AB, const int LDAB, number *W, complex<number> *Z, const int LDZ);
 
+// GENERALIZED EIGENVALUES AND SINGULAR VALUES
+
+// s, d, c, z
+template <class number>
+int gges(const char order, const char jobVSL, const char jobVSR, const char sort, const int N, number *A, const int LDA, number *B, const int LDB, int *DIM, number *ALPHAR, number *ALPHAI, number *BETA, number *VSL, const int LDVSL, number *VSR, const int LDVSR);
+template <class number>
+int ggev(const char order, const char jobVL, const char jobVR, const int N, number *A, const int LDA, number *B, const int LDB, number *ALPHAR, number *ALPHAI, number *BETA, number *VL, const int LDVL, number *VR, const int LDVR);
+template <class number, class scalar=number>
+int ggsvd(const char order, const char jobU, const char jobV, const char jobQ, const int M, const int N, const int P, int *K, int *L, number *A, const int LDA, number *B, const int LDB, scalar *ALPHA, scalar *BETA, number *U, const int LDU, number *V, const int LDV, number *Q, const int LDQ, int *IWORK);
+// s, d
+template <class number>
+int sygv(const char order, const int type, const char job, const char uplo, const int N, number *A, const int LDA, number *B, const int LDB, number *W);
+template <class number>
+int spgv(const char order, const int type, const char job, const char uplo, const int N, number *AP, number *BP, number *W, number *Z, const int LDZ);
+template <class number>
+int sbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, number *AB, const int LDAB, number *BB, const int LDBB, number *W, number *Z, const int LDZ);
+// c, z
+template <class number>
+int hegv(const char order, const int type, const char job, const char uplo, const int N, complex<number> *A, const int LDA, complex<number> *B, const int LDB, number *W);
+template <class number>
+int hpgv(const char order, const int type, const char job, const char uplo, const int N, complex<number> *AP, complex<number> *BP, number *W, complex<number> *Z, const int LDZ);
+template <class number>
+int hbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, complex<number> *AB, const int LDAB, complex<number> *BB, const int LDBB, number *W, complex<number> *Z, const int LDZ);
+
+// COMPUTATIONAL ROUTINES FOR LINEAR EQUATIONS
+
+// s, d, c, z
+template <class number>
+int getrf(const char order, const int M, const int N, number *A, const int LDA, int *IPIV);
+template <class number>
+int getrs(const char order, const char trans, const int N, const int M, const number *A, const int LDA, const int *IPIV, number *B, const int LDB);
 
 
 /////////////////////////// SINGLE PRECISION FLOAT ////////////////////////////
@@ -222,6 +249,51 @@ int stev(const char order, const char job, const int N, float *D, float *E, floa
 	return LAPACKE_sstev(order, job, N, D, E, Z, LDZ);
 }
 
+// GENERALIZED EIGENVALUES AND SINGULAR VALUES
+
+template <> inline
+int gges(const char order, const char jobVSL, const char jobVSR, const char sort, const int N, float *A, const int LDA, float *B, const int LDB, int *DIM, float *ALPHAR, float *ALPHAI, float *BETA, float *VSL, const int LDVSL, float *VSR, const int LDVSR)
+{
+	return LAPACKE_sgges(order, jobVSL, jobVSR, sort, nullptr, N, A, LDA, B, LDB, DIM, ALPHAR, ALPHAI, BETA, VSL, LDVSL, VSR, LDVSR);
+}
+template <> inline
+int ggev(const char order, const char jobVL, const char jobVR, const int N, float *A, const int LDA, float *B, const int LDB, float *ALPHAR, float *ALPHAI, float *BETA, float *VL, const int LDVL, float *VR, const int LDVR)
+{
+	return LAPACKE_sggev(order, jobVL, jobVR, N, A, LDA, B, LDB, ALPHAR, ALPHAI, BETA, VL, LDVL, VR, LDVR);
+}
+template <> inline
+int ggsvd(const char order, const char jobU, const char jobV, const char jobQ, const int M, const int N, const int P, int *K, int *L, float *A, const int LDA, float *B, const int LDB, float *ALPHA, float *BETA, float *U, const int LDU, float *V, const int LDV, float *Q, const int LDQ, int *WORK)
+{
+	return LAPACKE_sggsvd(order, jobU, jobV, jobQ, M, N, P, K, L, A, LDA, B, LDB, ALPHA, BETA, U, LDU, V, LDV, Q, LDQ, WORK);
+}
+template <> inline
+int sygv(const char order, const int type, const char job, const char uplo, const int N, float *A, const int LDA, float *B, const int LDB, float *W)
+{
+	return LAPACKE_ssygv(order, type, job, uplo, N, A, LDA, B, LDB, W);
+}
+template <> inline
+int spgv(const char order, const int type, const char job, const char uplo, const int N, float *AP, float *BP, float *W, float *Z, const int LDZ)
+{
+	return LAPACKE_sspgv(order, type, job, uplo, N, AP, BP, W, Z, LDZ);
+}
+template <> inline
+int sbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, float *AB, const int LDAB, float *BB, const int LDBB, float *W, float *Z, const int LDZ)
+{
+	return LAPACKE_ssbgv(order, job, uplo, N, KA, KB, AB, LDAB, BB, LDBB, W, Z, LDZ);
+}
+
+// LINEAR EQUATIONS
+
+template <> inline
+int getrf(const char order, const int M, const int N, float *A, const int LDA, int *IPIV)
+{
+	return LAPACKE_sgetrf(order, M, N, A, LDA, IPIV);
+}
+template <> inline
+int getrs(const char order, const char trans, const int N, const int M, const float *A, const int LDA, const int *IPIV, float *B, const int LDB)
+{
+	return LAPACKE_sgetrs(order, trans, N, M, A, LDA, IPIV, B, LDB);
+}
 
 
 /////////////////////////// DOUBLE PRECISION FLOAT ////////////////////////////
@@ -349,6 +421,51 @@ int stev(const char order, const char job, const int N, double *D, double *E, do
 	return LAPACKE_dstev(order, job, N, D, E, Z, LDZ);
 }
 
+// GENERALIZED EIGENVALUES AND SINGULAR VALUES
+
+template <> inline
+int gges(const char order, const char jobVSL, const char jobVSR, const char sort, const int N, double *A, const int LDA, double *B, const int LDB, int *DIM, double *ALPHAR, double *ALPHAI, double *BETA, double *VSL, const int LDVSL, double *VSR, const int LDVSR)
+{
+	return LAPACKE_dgges(order, jobVSL, jobVSR, sort, nullptr, N, A, LDA, B, LDB, DIM, ALPHAR, ALPHAI, BETA, VSL, LDVSL, VSR, LDVSR);
+}
+template <> inline
+int ggev(const char order, const char jobVL, const char jobVR, const int N, double *A, const int LDA, double *B, const int LDB, double *ALPHAR, double *ALPHAI, double *BETA, double *VL, const int LDVL, double *VR, const int LDVR)
+{
+	return LAPACKE_dggev(order, jobVL, jobVR, N, A, LDA, B, LDB, ALPHAR, ALPHAI, BETA, VL, LDVL, VR, LDVR);
+}
+template <> inline
+int ggsvd(const char order, const char jobU, const char jobV, const char jobQ, const int M, const int N, const int P, int *K, int *L, double *A, const int LDA, double *B, const int LDB, double *ALPHA, double *BETA, double *U, const int LDU, double *V, const int LDV, double *Q, const int LDQ, int *WORK)
+{
+	return LAPACKE_dggsvd(order, jobU, jobV, jobQ, M, N, P, K, L, A, LDA, B, LDB, ALPHA, BETA, U, LDU, V, LDV, Q, LDQ, WORK);
+}
+template <> inline
+int sygv(const char order, const int type, const char job, const char uplo, const int N, double *A, const int LDA, double *B, const int LDB, double *W)
+{
+	return LAPACKE_dsygv(order, type, job, uplo, N, A, LDA, B, LDB, W);
+}
+template <> inline
+int spgv(const char order, const int type, const char job, const char uplo, const int N, double *AP, double *BP, double *W, double *Z, const int LDZ)
+{
+	return LAPACKE_dspgv(order, type, job, uplo, N, AP, BP, W, Z, LDZ);
+}
+template <> inline
+int sbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, double *AB, const int LDAB, double *BB, const int LDBB, double *W, double *Z, const int LDZ)
+{
+	return LAPACKE_dsbgv(order, job, uplo, N, KA, KB, AB, LDAB, BB, LDBB, W, Z, LDZ);
+}
+
+// COMPUTATIONAL ROUTINES FOR LINEAR EQUATIONS
+
+template <> inline
+int getrf(const char order, const int M, const int N, double *A, const int LDA, int *IPIV)
+{
+	return LAPACKE_dgetrf(order, M, N, A, LDA, IPIV);
+}
+template <> inline
+int getrs(const char order, const char trans, const int N, const int M, const double *A, const int LDA, const int *IPIV, double *B, const int LDB)
+{
+	return LAPACKE_dgetrs(order, trans, N, M, A, LDA, IPIV, B, LDB);
+}
 
 
 ////////////////////////// SINGLE PRECISION COMPLEX ///////////////////////////
@@ -451,12 +568,12 @@ int ggglm(const char order, const int N, const int M, const int P, complex<float
 // EIGENVALUES AND SINGULAR VALUES
 
 template <> inline
-int gees(const char order, const char job, const char sort, const int N, complex<float> *A, const int LDA, int *DIM, complex<float> *W, complex<float> *VS, const int LDVS)
+int gees(const char order, const char job, const char sort, const int N, complex<float> *A, const int LDA, int *DIM, complex<float> *W, complex<float> *NA, complex<float> *VS, const int LDVS)
 {
 	return LAPACKE_cgees(order, job, sort, nullptr, N, A, LDA, DIM, W, VS, LDVS);
 }
 template <> inline
-int geev(const char order, const char jobVL, const char jobVR, const int N, complex<float> *A, const int LDA, complex<float> *W, complex<float> *VL, const int LDVL, complex<float> *VR, const int LDVR)
+int geev(const char order, const char jobVL, const char jobVR, const int N, complex<float> *A, const int LDA, complex<float> *W, complex<float> *NA, complex<float> *VL, const int LDVL, complex<float> *VR, const int LDVR)
 {
 	return LAPACKE_cgeev(order, jobVL, jobVR, N, A, LDA, W, VL, LDVL, VR, LDVR);
 }
@@ -481,12 +598,57 @@ int hbev(const char order, const char job, const char uplo, const int N, const i
 	return LAPACKE_chbev(order, job, uplo, N, KD, AB, LDAB, W, Z, LDZ);
 }
 
+// GENERALIZED EIGENVALUES AND SINGULAR VALUES
+
+template <> inline
+int gges(const char order, const char jobVSL, const char jobVSR, const char sort, const int N, complex<float>  *A, const int LDA, complex<float> *B, const int LDB, int *DIM, complex<float> *ALPHA, complex<float> *NA, complex<float> *BETA, complex<float> *VSL, const int LDVSL, complex<float> *VSR, const int LDVSR)
+{
+	return LAPACKE_cgges(order, jobVSL, jobVSR, sort, nullptr, N, A, LDA, B, LDB, DIM, ALPHA, BETA, VSL, LDVSL, VSR, LDVSR);
+}
+template <> inline
+int ggev(const char order, const char jobVL, const char jobVR, const int N, complex<float> *A, const int LDA, complex<float> *B, const int LDB, complex<float> *ALPHA, complex<float> *NA, complex<float> *BETA, complex<float> *VL, const int LDVL, complex<float> *VR, const int LDVR)
+{
+	return LAPACKE_cggev(order, jobVL, jobVR, N, A, LDA, B, LDB, ALPHA, BETA, VL, LDVL, VR, LDVR);
+}
+template <> inline
+int ggsvd(const char order, const char jobU, const char jobV, const char jobQ, const int M, const int N, const int P, int *K, int *L, complex<float> *A, const int LDA, complex<float> *B, const int LDB, float *ALPHA, float *BETA, complex<float> *U, const int LDU, complex<float> *V, const int LDV, complex<float> *Q, const int LDQ, int *IWORK)
+{
+	return LAPACKE_cggsvd(order, jobU, jobV, jobQ, M, N, P, K, L, A, LDA, B, LDB, ALPHA, BETA, U, LDU, V, LDV, Q, LDQ, IWORK);
+}
+template <> inline
+int hegv(const char order, const int type, const char job, const char uplo, const int N, complex<float> *A, const int LDA, complex<float> *B, const int LDB, float *W)
+{
+	return LAPACKE_chegv(order, type, job, uplo, N, A, LDA, B, LDB, W);
+}
+template <> inline
+int hpgv(const char order, const int type, const char job, const char uplo, const int N, complex<float> *AP, complex<float> *BP, float *W, complex<float> *Z, const int LDZ)
+{
+	return LAPACKE_chpgv(order, type, job, uplo, N, AP, BP, W, Z, LDZ);
+}
+template <> inline
+int hbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, complex<float> *AB, const int LDAB, complex<float> *BB, const int LDBB, float *W, complex<float> *Z, const int LDZ)
+{
+	return LAPACKE_chbgv(order, job, uplo, N, KA, KB, AB, LDAB, BB, LDBB, W, Z, LDZ);
+}
+
+// COMPUTATIONAL ROUTINES FOR LINEAR EQUATIONS
+
+template <> inline
+int getrf(const char order, const int M, const int N, complex<float> *A, const int LDA, int *IPIV)
+{
+	return LAPACKE_cgetrf(order, M, N, A, LDA, IPIV);
+}
+template <> inline
+int getrs(const char order, const char trans, const int N, const int M, const complex<float> *A, const int LDA, const int *IPIV, complex<float> *B, const int LDB)
+{
+	return LAPACKE_cgetrs(order, trans, N, M, A, LDA, IPIV, B, LDB);
+}
 
 
 ////////////////////////// DOUBLE PRECISION COMPLEX ///////////////////////////
 
 
-// Linear Equations
+// LINEAR EQUATIONS
 
 template <> inline
 int gesv(const char order, const int N, const int M, complex<double> *A, const int LDA, int *IPIV, complex<double> *B, const int LDB)
@@ -583,12 +745,12 @@ int ggglm(const char order, const int N, const int M, const int P, complex<doubl
 // EIGENVALUES AND SINGULAR VALUES
 
 template <> inline
-int gees(const char order, const char job, const char sort, const int N, complex<double> *A, const int LDA, int *DIM, complex<double> *W, complex<double> *VS, const int LDVS)
+int gees(const char order, const char job, const char sort, const int N, complex<double> *A, const int LDA, int *DIM, complex<double> *W, complex<double> *NA, complex<double> *VS, const int LDVS)
 {
 	return LAPACKE_zgees(order, job, sort, nullptr, N, A, LDA, DIM, W, VS, LDVS);
 }
 template <> inline
-int geev(const char order, const char jobVL, const char jobVR, const int N, complex<double> *A, const int LDA, complex<double> *W, complex<double> *VL, const int LDVL, complex<double> *VR, const int LDVR)
+int geev(const char order, const char jobVL, const char jobVR, const int N, complex<double> *A, const int LDA, complex<double> *W, complex<double> *NA, complex<double> *VL, const int LDVL, complex<double> *VR, const int LDVR)
 {
 	return LAPACKE_zgeev(order, jobVL, jobVR, N, A, LDA, W, VL, LDVL, VR, LDVR);
 }
@@ -613,7 +775,54 @@ int hbev(const char order, const char job, const char uplo, const int N, const i
 	return LAPACKE_zhbev(order, job, uplo, N, KD, AB, LDAB, W, Z, LDZ);
 }
 
+// GENERALIZED EIGENVALUES AND SINGULAR VALUES
+
+template <> inline
+int gges(const char order, const char jobVSL, const char jobVSR, const char sort, const int N, complex<double>  *A, const int LDA, complex<double> *B, const int LDB, int *DIM, complex<double> *ALPHA, complex<double> *NA, complex<double> *BETA, complex<double> *VSL, const int LDVSL, complex<double> *VSR, const int LDVSR)
+{
+	return LAPACKE_zgges(order, jobVSL, jobVSR, sort, nullptr, N, A, LDA, B, LDB, DIM, ALPHA, BETA, VSL, LDVSL, VSR, LDVSR);
+}
+template <> inline
+int ggev(const char order, const char jobVL, const char jobVR, const int N, complex<double> *A, const int LDA, complex<double> *B, const int LDB, complex<double> *ALPHA, complex<double> *NA, complex<double> *BETA, complex<double> *VL, const int LDVL, complex<double> *VR, const int LDVR)
+{
+	return LAPACKE_zggev(order, jobVL, jobVR, N, A, LDA, B, LDB, ALPHA, BETA, VL, LDVL, VR, LDVR);
+}
+template <> inline
+int ggsvd(const char order, const char jobU, const char jobV, const char jobQ, const int M, const int N, const int P, int *K, int *L, complex<double> *A, const int LDA, complex<double> *B, const int LDB, double *ALPHA, double *BETA, complex<double> *U, const int LDU, complex<double> *V, const int LDV, complex<double> *Q, const int LDQ, int *IWORK)
+{
+	return LAPACKE_zggsvd(order, jobU, jobV, jobQ, M, N, P, K, L, A, LDA, B, LDB, ALPHA, BETA, U, LDU, V, LDV, Q, LDQ, IWORK);
+}
+template <> inline
+int hegv(const char order, const int type, const char job, const char uplo, const int N, complex<double> *A, const int LDA, complex<double> *B, const int LDB, double *W)
+{
+	return LAPACKE_zhegv(order, type, job, uplo, N, A, LDA, B, LDB, W);
+}
+template <> inline
+int hpgv(const char order, const int type, const char job, const char uplo, const int N, complex<double> *AP, complex<double> *BP, double *W, complex<double> *Z, const int LDZ)
+{
+	return LAPACKE_zhpgv(order, type, job, uplo, N, AP, BP, W, Z, LDZ);
+}
+template <> inline
+int hbgv(const char order, const char job, const char uplo, const int N, const int KA, const int KB, complex<double> *AB, const int LDAB, complex<double> *BB, const int LDBB, double *W, complex<double> *Z, const int LDZ)
+{
+	return LAPACKE_zhbgv(order, job, uplo, N, KA, KB, AB, LDAB, BB, LDBB, W, Z, LDZ);
+}
 
 
-#endif // file
+// COMPUTATIONAL ROUTINES FOR LINEAR EQUATIONS
+
+template <> inline
+int getrf(const char order, const int M, const int N, complex<double> *A, const int LDA, int *IPIV)
+{
+	return LAPACKE_zgetrf(order, M, N, A, LDA, IPIV);
+}
+template <> inline
+int getrs(const char order, const char trans, const int N, const int M, const complex<double> *A, const int LDA, const int *IPIV, complex<double> *B, const int LDB)
+{
+	return LAPACKE_zgetrs(order, trans, N, M, A, LDA, IPIV, B, LDB);
+}
+
+
+
+#endif // FILE
 

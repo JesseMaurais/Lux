@@ -1,11 +1,6 @@
 #ifndef cblas_hpp
 #define cblas_hpp
 
-/**
- * Wrapper around CBLAS functions with templates and overloading so that more
- * generic code can be written which access these linear algebra functions.
- */
-
 #include <cblas.h>
 #include <complex>
 
@@ -1020,54 +1015,4 @@ void her2k(const char order, const char uplo, const char trans, const int N, con
 }
 
 
-///////////////////////////// CLASS INTERFACE /////////////////////////////////
-
-
-template <class number, int dim> struct vector
-{
-	number *array;
-	int inc;
-
-	// LEVEL 1
-
-	number nrm2(void)
-	{
-		return ::nrm2(dim, array, inc);
-	}
-
-	number asum(void)
-	{
-		return ::asum(dim, array, inc);
-	}
-
-	size_t iamax(void)
-	{
-		return ::iamax(dim, array, inc);
-	}
-
-	void swap(vector &X)
-	{
-		::swap(dim, X.array, X.inc, array, inc);
-	}
-
-	void copy(const vector &X)
-	{
-		::copy(dim, X.array, X.inc, array, inc);
-	}
-
-	void axpy(const number alpha, const vector &X)
-	{
-		::axpy(dim, alpha, X.array, X.inc, array, inc);
-	}
-
-	void scal(const number alpha)
-	{
-		::scal(dim, alpha, array. inc);
-	}
-};
-
-
-
-
-#endif // file
-
+#endif // FILE
