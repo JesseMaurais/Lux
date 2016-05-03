@@ -23,7 +23,7 @@
 #include <wchar.h>
 #include <uchar.h>
 
-struct lux_Chars : mbstate_t
+struct lux_Chars : mbstate_t // portable?
 {
 	lux_Chars(void)
 	{
@@ -118,7 +118,7 @@ struct lux_Chars : mbstate_t
 		return len;
 	}
 
-	// String conversion
+	// String conversion general
 
 	template <class Char>
 	int fromstring(char *dst, const Char *src, size_t len)

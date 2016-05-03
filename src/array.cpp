@@ -1,10 +1,14 @@
-#include "lux.hpp"
+/**
+ * Straight-forward implementation of POD arrays with Unicode conversions.
+ */
 
-// Straight-forward implementation of POD arrays with Unicode conversions
+#include "lux.hpp"
 
 extern "C" int luaopen_array(lua_State *state)
 {
-	// Common numeric functions
+	lua_newtable(state);
+	int tab = lua_gettop(state);
+	// Common numeric types
 	luaL_Reg regs[] =
 	{
 	{"int", lux_Array<int>::open},
@@ -15,10 +19,13 @@ extern "C" int luaopen_array(lua_State *state)
 	{"double", lux_Array<double>::open},
 	{nullptr}
 	};
+	// Register and put in module table
 	for (auto reg=regs; reg->name; ++reg)
 	{
-	 luaL_requiref(state, reg->name, reg->func, true);
-	 lua_pop(state, 1);
+		// Create the metatable but do not make it global
+		luaL_requiref(state, reg->name, reg->func, false);
+		// Store in returned module table
+		lua_setfield(state, tab, reg->name);
 	}
 	// Character coding
 	luaL_Reg codes[] =
@@ -29,13 +36,17 @@ extern "C" int luaopen_array(lua_State *state)
 	{"long", lux_Coder<long>::open},
 	{nullptr}
 	};
+	// Add UTF encode/decode to integer types
 	for (auto code=codes; code->name; ++code)
 	{
-	 lua_pushstring(state, code->name);
-	 code->func(state);
-	 lua_pop(state, 1);
+		// Include the metatable name
+		lua_pushstring(state, code->name);
+		// Call the loader
+		code->func(state);
+		// Pop name & table
+		lua_pop(state, 2);
 	}
 	// Done
-	return 0;
+	return 1;
 }
 

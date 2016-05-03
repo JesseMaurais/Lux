@@ -735,6 +735,7 @@ template <class User> struct lux_Array
 			// Register these functions
 			luaL_setfuncs(state, regs, 0);
 		}
+		// Done
 		return 1;
 	}
 };

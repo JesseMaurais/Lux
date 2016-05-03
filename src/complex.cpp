@@ -6,8 +6,8 @@
  * system. Additional operations are defined so that these classes can become
  * elements in the array classes as well. For example, both the less-than and
  * the less-than-or-equal operators are defined for complex numbers, in which
- * their order are determined by their relative distance to the origin in the
- * complex plane. This allows sorting arrays of complex numbers.
+ * their order are determined by their positions on a spiral that is centered
+ * about the origin in the complex plane.
  */
 
 #include "lux.hpp"
@@ -15,21 +15,23 @@
 #include <cstdio>
 #include <cmath>
 
+
 template <class real> using complex = std::complex<real>;
 
-// Relations are determined relative to the origin on the complex plane
+
+// Relations are determined relative on the spiral in the complex plane
 
 template <class real> inline
 bool operator < (const complex<real> &c, const complex<real> &d)
 {
-	return std::norm(c) < std::norm(d);
+	return std::norm(c) < std::norm(d) and std::arg(c) < std::arg(d);
 }
-
 template <class real> inline
 bool operator <= (const complex<real> &c, const complex<real> &d)
 {
-	return std::norm(c) <= std::norm(d);
+	return std::norm(c) <= std::norm(d) and std::arg(c) <= std::arg(d);
 }
+
 
 // Overloaded for implicit conversion from related numeric type
 
@@ -39,20 +41,19 @@ complex<float> lux_to<complex<float>>(lua_State *state, int stack)
 	if (lua_isnumber(state, stack)) return lua_tonumber(state, stack);
 	return lux_Store<complex<float>>::to(state, stack);
 }
-
 template <> inline
 complex<double> lux_to<complex<double>>(lua_State *state, int stack)
 {
 	if (lua_isnumber(state, stack)) return lua_tonumber(state, stack);
 	return lux_Store<complex<double>>::to(state, stack);
 }
-
 template <> inline
 complex<long double> lux_to<complex<long double>>(lua_State *state, int stack)
 {
 	if (lua_isnumber(state, stack)) return lua_tonumber(state, stack);
 	return lux_Store<complex<long double>>::to(state, stack);
 }
+
 
 // Storage class to define the methods of the complex number type
 
@@ -227,6 +228,7 @@ template <class Real> struct lux_Complex
 	// Loader compatible with luaL_requiref
 	static int open(lua_State *state)
 	{
+		// This is the literal complex type
 		luaL_newmetatable(state, Type::name);
 		luaL_Reg regs[] =
 		{
@@ -243,10 +245,11 @@ template <class Real> struct lux_Complex
 		{nullptr}
 		};
 		luaL_setfuncs(state, regs, 0);
-		lua_pop(state, 1);
-		// Open the complex array type
+		lua_pop(state, 1); // remove
+		
+		// This is the complex array type
 		lux_Array<Complex>::open(state);
-		// Additional methods
+		// Extra methods
 		luaL_Reg index[] =
 		{
 		{"real", real},
@@ -260,64 +263,43 @@ template <class Real> struct lux_Complex
 		{nullptr}
 		};
 		luaL_setfuncs(state, index, 0);
+		
 		// The imaginary unit sqrt(-1)
 		lua_pushliteral(state, "i");
 		lux_push(state, Complex(0, 1));
 		lua_settable(state, -3);
+		
+		// Done
 		return 1;
  	}
 
-	// Custom element compare for overloading arrays
-	static int compare(const void *p, const void *q)
-	{
-		// Call norm only 2 times instead of 4 
-		auto n = std::norm(*(const Complex *) p);
-		auto m = std::norm(*(const Complex *) q);
-		// Compare their magnitudes squared
-		return n < m ? -1 : m < n ? +1 : 0;
-	}
 };
-
-// Overload arrays to use optimized complex number comparison
-
-template <>
-int lux_Array<complex<float>>::compare(const void *p, const void *q)
-{
-	return lux_Complex<float>::compare(p, q);
-}
-
-template <>
-int lux_Array<complex<double>>::compare(const void *p, const void *q)
-{
-	return lux_Complex<double>::compare(p, q);
-}
-
-template <>
-int lux_Array<complex<long double>>::compare(const void *p, const void *q)
-{
-	return lux_Complex<long double>::compare(p, q);
-}
 
 // Lua module entry point
 
 extern "C" int luaopen_complex(lua_State *state)
 {
+	lua_newtable(state);
+	int tab = lua_gettop(state);
+	// Common numeric types
 	luaL_Reg regs[] =
 	{
 	{"float", lux_Complex<float>::open},
 	{"double", lux_Complex<double>::open},
 	{nullptr}
 	};
-	for (auto r=regs; r->name; ++r)
+	// Register and put in module table
+	for (auto reg=regs; reg->name; ++reg)
 	{
-	 if (luaL_getmetatable(state, r->name))
-	 {
-	 	r->func(state); // Complex<Real>::open(state)
-	 	lua_setfield(state, -2, "complex");
-	 	lua_pop(state, 1);
-	 }
-	 else return luaL_error(state, "Must require 'array'");
+		char name[128];
+		// Convert name to avoid namespace hit
+		sprintf(name, "complex.%s", reg->name);
+		// Create metatable but do not make it global
+		luaL_requiref(state, name, reg->func, false);
+		// Store in returned module table
+		lua_setfield(state, tab, reg->name);
 	}
-	return 0;
+	// Done
+	return 1;
 }
 
