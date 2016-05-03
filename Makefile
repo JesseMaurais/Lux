@@ -19,17 +19,18 @@ uninstall:
 	rmdir $(INC)
 	rm $(addprefix $(LIB)/, $(OBJ))
 
-%.so: src/%.cpp $(SRC)
+%.so: src/%.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
 
-thread.so: src/thread.cpp $(SRC)
+thread.so: src/thread.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -pthread
 
-pthread.so: src/pthread.cpp $(SRC)
+pthread.so: src/pthread.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -pthread
 
-mqueue.so: src/mqueue.cpp $(SRC)
+mqueue.so: src/mqueue.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lrt
 
-time.so: src/time.cpp $(SRC)
+time.so: src/time.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lrt
+
