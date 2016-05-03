@@ -1,6 +1,8 @@
 CC=g++
 CFLAGS=-std=c++11
 OBJ=array.so complex.so fcntl.so fenv.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
+INC=/usr/local/include/lux
+LIB=/usr/local/lib/lua/5.3
 
 all: $(OBJ)
 
@@ -8,12 +10,14 @@ clean:
 	rm $(OBJ)
 
 install:
-	mkdir /usr/local/include/lux
-	cp -t /usr/local/include/lux src/*.hpp
+	mkdir $(INC)
+	cp -t $(INC) src/*.hpp
+	cp $(OBJ) $(LIB)
 
 uninstall:
-	rm /usr/local/include/lux/*
-	rmdir /usr/local/include/lux
+	rm $(INC)/*
+	rmdir $(INC)
+	rm $(addprefix $(LIB)/, $(OBJ))
 
 %.so: src/%.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
