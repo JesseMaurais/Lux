@@ -2,8 +2,8 @@ CC=g++
 CFLAGS=-std=c++11
 SRC=lux.hpp lxalloc.hpp lxarray.hpp lxbuffs.hpp lxchars.hpp lxclass.hpp lxdebug.hpp lxerror.hpp lxstack.hpp lxstore.hpp lxthunk.hpp lxtools.hpp
 OBJ=array.so complex.so fcntl.so fenv.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
-INC=/usr/local/include/lux
-LIB=/usr/local/lib/lua/5.3
+INC=/usr/local/include/lux/
+LIB=/usr/local/lib/lua/5.3/
 
 all: $(OBJ)
 
@@ -17,9 +17,9 @@ install:
 	cp $(OBJ) $(LIB)
 
 uninstall:
-	rm $(addprefix $(INC)/, $(SRC))
+	rm $(addprefix $(INC), $(SRC))
 	rmdir $(INC)
-	rm $(addprefix $(LIB)/, $(OBJ))
+	rm $(addprefix $(LIB), $(OBJ))
 
 %.so: src/%.cpp
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $<
