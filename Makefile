@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-std=c++11
-OBJ=array.so blas.so complex.so fcntl.so fenv.so lapack.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
+OBJ=array.so complex.so fcntl.so fenv.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
 
 all: $(OBJ)
 
@@ -29,10 +29,3 @@ mqueue.so: src/mqueue.cpp $(SRC)
 
 time.so: src/time.cpp $(SRC)
 	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lrt
-
-blas.so: src/blas.cpp src/cblas.hpp $(SRC)
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -lblas
-
-lapack.so: src/lapack.cpp src/lapacke.hpp $(SRC)
-	$(CC) $(CFLAGS) -shared -o $@ -fpic $< -llapacke
-
