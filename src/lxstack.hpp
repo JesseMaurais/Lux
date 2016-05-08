@@ -28,10 +28,11 @@ int lux_push(lua_State *state, User data, Args... args)
 
 /// Generic push -- assume that argument is user data
 template <class User> inline
-void lux_push(lua_State *state, User data)
+int lux_push(lua_State *state, User data)
 {
 	typedef lux_Store<User> Type;
 	(void) Type::push(state, data);
+	return 1;
 }
 
 /// Generic opt -- user data as an optional argument
@@ -53,106 +54,124 @@ User lux_to(lua_State *state, int stack)
 // Full function template specialization of push/to for POD types
 
 template <> inline
-void lux_push<bool>(lua_State *state, bool value)
+int lux_push<bool>(lua_State *state, bool value)
 {
 	lua_pushboolean(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<int>(lua_State *state, int value)
+int lux_push<int>(lua_State *state, int value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<char>(lua_State *state, char value)
+int lux_push<char>(lua_State *state, char value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<short>(lua_State *state, short value)
+int lux_push<short>(lua_State *state, short value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<long>(lua_State *state, long value)
+int lux_push<long>(lua_State *state, long value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<float>(lua_State *state, float value)
+int lux_push<float>(lua_State *state, float value)
 {
 	lua_pushnumber(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<double>(lua_State *state, double value)
+int lux_push<double>(lua_State *state, double value)
 {
 	lua_pushnumber(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<void*>(lua_State *state, void *value)
+int lux_push<void*>(lua_State *state, void *value)
 {
 	lua_pushlightuserdata(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<long long>(lua_State *state, long long value)
+int lux_push<long long>(lua_State *state, long long value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<long double>(lua_State *state, long double value)
+int lux_push<long double>(lua_State *state, long double value)
 {
 	lua_pushnumber(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<lua_CFunction>(lua_State *state, lua_CFunction value)
+int lux_push<lua_CFunction>(lua_State *state, lua_CFunction value)
 {
 	lua_pushcfunction(state, value);
+	return 1;
 }
 
 // For unsigned types
 
 template <> inline
-void lux_push<unsigned int>(lua_State *state, unsigned int value)
+int lux_push<unsigned int>(lua_State *state, unsigned int value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<unsigned char>(lua_State *state, unsigned char value)
+int lux_push<unsigned char>(lua_State *state, unsigned char value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<unsigned short>(lua_State *state, unsigned short value)
+int lux_push<unsigned short>(lua_State *state, unsigned short value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<unsigned long>(lua_State *state, unsigned long value)
+int lux_push<unsigned long>(lua_State *state, unsigned long value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 template <> inline
-void lux_push<unsigned long long>(lua_State *state, unsigned long long value)
+int lux_push<unsigned long long>(lua_State *state, unsigned long long value)
 {
 	lua_pushinteger(state, value);
+	return 1;
 }
 
 // Special case of explicit nullptr argument
 
 template <> inline
-void lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t)
+int lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t)
 {
 	lua_pushnil(state);
+	return 1;
 }
 
 // Special case of C FILE handle
 
 template <> inline
-void lux_push<FILE*>(lua_State *state, FILE *value)
+int lux_push<FILE*>(lua_State *state, FILE *value)
 {
 	auto stream = new (state) luaL_Stream;
 	stream->f = value;
 	stream->closef = nullptr;
 	luaL_setmetatable(state, LUA_FILEHANDLE);
+	return 1;
 }
 
 // Optional argument conversion forms

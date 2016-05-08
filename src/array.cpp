@@ -11,12 +11,12 @@ extern "C" int luaopen_array(lua_State *state)
 	// Common numeric types
 	luaL_Reg regs[] =
 	{
-	{"int", lux_Array<int>::open},
-	{"char", lux_Array<char>::open},
-	{"short", lux_Array<short>::open},
-	{"long", lux_Array<long>::open},
-	{"float", lux_Array<float>::open},
-	{"double", lux_Array<double>::open},
+	{lux_Array<int>::Type::name, lux_Array<int>::open},
+	{lux_Array<char>::Type::name, lux_Array<char>::open},
+	{lux_Array<short>::Type::name, lux_Array<short>::open},
+	{lux_Array<long>::Type::name, lux_Array<long>::open},
+	{lux_Array<float>::Type::name, lux_Array<float>::open},
+	{lux_Array<double>::Type::name, lux_Array<double>::open},
 	{nullptr}
 	};
 	// Register and put in module table
@@ -30,10 +30,10 @@ extern "C" int luaopen_array(lua_State *state)
 	// Character coding
 	luaL_Reg codes[] =
 	{
-	{"int", lux_Coder<int>::open},
-	{"char", lux_Coder<char>::open},
-	{"short", lux_Coder<short>::open},
-	{"long", lux_Coder<long>::open},
+	{lux_Array<int>::Type::name, lux_Coder<int>::open},
+	{lux_Array<char>::Type::name, lux_Coder<char>::open},
+	{lux_Array<short>::Type::name, lux_Coder<short>::open},
+	{lux_Array<long>::Type::name, lux_Coder<long>::open},
 	{nullptr}
 	};
 	// Add UTF encode/decode to integer types

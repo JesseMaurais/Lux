@@ -8,9 +8,10 @@
 #include <csignal>
 
 template <> inline
-void lux_push<sighandler_t>(lua_State *state, sighandler_t act)
+int lux_push<sighandler_t>(lua_State *state, sighandler_t act)
 {
 	lua_pushlightuserdata(state, (void*) act);
+	return 1;
 }
 
 template <> inline

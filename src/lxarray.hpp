@@ -102,8 +102,7 @@ template <class User> struct lux_Array
 	static int __len(lua_State *state)
 	{
 		Type *user = Type::check(state);
-		lux_push(state, abs(user->size));
-		return 1;
+		return lux_push(state, abs(user->size));
 	}
 
 	/// Read array data at offset
@@ -693,9 +692,9 @@ template <class User> struct lux_Array
 	static int open(lua_State *state)
 	{
 		// Pull module name off the stack
-		Type::name = lua_tostring(state, 1);
-		// Create a metatable for array type
-		luaL_newmetatable(state, Type::name);
+		auto name = lua_tostring(state, 1);
+		// Create a metatable for array
+		luaL_newmetatable(state, name);
 		{
 			luaL_Reg regs [] =
 			{
