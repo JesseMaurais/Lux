@@ -51,6 +51,7 @@ template <class Base> struct Random
 		default:
 			// We only accept these types as arguments
 			return luaL_argerror(state, 2, "array, table, none");
+		case LUA_TNIL:
 		case LUA_TNONE:
 			// Generate just one number
 			lux_push(state, user->data());
@@ -60,6 +61,7 @@ template <class Base> struct Random
 			// Create a new table
 			lua_newtable(state);
 			break;
+		case LUA_TTABLE:
 		case LUA_TUSERDATA: // array?
 			size = luaL_len(state, 2);
 			// Put it onto stack top
@@ -88,6 +90,7 @@ template <class Base> struct Random
 		default:
 			// We only accept these types as arguments
 			return luaL_argerror(state, 2, "array, table, none");
+		case LUA_TNIL:
 		case LUA_TNONE:
 			// Generate just one number
 			lux_push(state, distribution(user->data));
@@ -97,6 +100,7 @@ template <class Base> struct Random
 			// Create a new table
 			lua_newtable(state);
 			break;
+		case LUA_TTABLE:
 		case LUA_TUSERDATA: // array?
 			size = luaL_len(state, 2);
 			// Put it onto stack top

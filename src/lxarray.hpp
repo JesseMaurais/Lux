@@ -737,6 +737,12 @@ template <class User> struct lux_Array
 		// Done
 		return 1;
 	}
+	
+	/// Require-like function joining 'name' and 'open'
+	static void require(lua_State *state, bool global=false)
+	{
+		luaL_requiref(state, Type::name, open, global);
+	}
 };
 
 #endif // file

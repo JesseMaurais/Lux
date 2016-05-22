@@ -5,7 +5,7 @@ uni = require'unistd'
 io = require'stdio'
 std = require'stdlib'
 
-str = char.new(io.FILENAME_MAX)
+str = array.char.new(io.FILENAME_MAX)
 
 uni.confstr(uni._CS_PATH, str, #str)
 print "The system search path is "

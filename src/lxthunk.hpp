@@ -56,7 +56,7 @@ int lux_thunk(lua_State *state, Res (Obj::*fun)(Args...))
 #include <exception>
 
 template <typename Function> inline
-int lux_nothunk(lua_State *state, Function fun) 
+int lux_nothunk(lua_State *state, Function fun) noexcept 
 {
 	try
 	{
