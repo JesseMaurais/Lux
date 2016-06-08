@@ -82,7 +82,7 @@ What is the project?
 \end_layout
 
 \begin_layout Standard
-Lux is a tool to bind C code to Lua automatically using only C++11.
+Lux is a tool to bind C and C++ code to Lua automatically using only C++11.
  
 \end_layout
 
