@@ -4,7 +4,6 @@
 #include "lxalloc.hpp"
 #include "lxstore.hpp"
 #include "lxstack.hpp"
-#include "lxtuple.hpp"
 #include "lxthunk.hpp"
 #include "lxchars.hpp"
 #include "lxarray.hpp"
