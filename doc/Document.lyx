@@ -1,0 +1,1211 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+A Case Study in Designing an Interface Between Compiled and Interpreted
+ Code
+\end_layout
+
+\begin_layout Author
+Jesse Maurais
+\end_layout
+
+\begin_layout Section*
+What is the project?
+\end_layout
+
+\begin_layout Standard
+Lux is a tool to bind C code to Lua automatically using only C++11.
+ 
+\end_layout
+
+\begin_layout Standard
+The name comes from the word 
+\begin_inset Quotes eld
+\end_inset
+
+lux
+\begin_inset Quotes erd
+\end_inset
+
+ which is the SI unit of illuminance, equal to one lumen per square meter,
+ and is used to measure the moon's luminosity.
+ The word 
+\begin_inset Quotes eld
+\end_inset
+
+lua
+\begin_inset Quotes erd
+\end_inset
+
+ is Portugese for 
+\begin_inset Quotes eld
+\end_inset
+
+moon.
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+What is the problem it solves?
+\end_layout
+
+\begin_layout Standard
+This project grew out of the needs of another project (a graphics engine)
+ to provide configuration and partial programming features; to make the
+ graphics engine more versatile by hard-coding less and deferring more of
+ its behaviour to instructions stored in a script.
+\end_layout
+
+\begin_layout Standard
+The problem then is developing the interface between code that is written
+ in C and C++ and code in the script that is written in Lua.
+ The problem at its most basic is: how to manage calling a C function from
+ the Lua script? There are other problems, like calling Lua functions from
+ C, how to access C data structures (arrays and structs), but let's narrow
+ the discussion to this one specific problem for the moment.
+ In fact, we are advantaged in narrowing the problem further, at least initially
+, by ignoring the many idiosyncrasies of C++, like passing arguments by
+ reference, and concentrate on functions familiar to vanilla C.
+ This still covers most use cases, and features of C++ lacking in the solution
+ can be added later.
+\end_layout
+
+\begin_layout Standard
+The Lua virtual machine will only accept C functions of a very specific
+ signature 
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+typedef int (*lua_CFunction)(lua_State *vm);
+\end_layout
+
+\end_inset
+
+Here, vm is a pointer to Lua's internal state, which includes all of its
+ data, tables, functions and a software call stack, all of which can be
+ manipulated from C.
+ The return value is the number of items pushed onto the stack and represents
+ how many return values Lua should expect from the function.
+\end_layout
+
+\begin_layout Standard
+However, most (all) C functions will not be written with that signature.
+ So we somehow need to get the C functions of our code called by a wrapper
+ function which 
+\emph on
+does 
+\emph default
+have this signature.
+ At the time that this project was created there were four popular methods
+ to proceed, listed here in order of decreasing time required to build and
+ maintain the interface:
+\end_layout
+
+\begin_layout Enumerate
+Write all C functions with Lua's preferred signature so that any of them
+ can be bound by their very design.
+\end_layout
+
+\begin_layout Enumerate
+Write wrapper functions around the C functions manually, converting to and
+ from Lua's software call stack.
+\end_layout
+
+\begin_layout Enumerate
+Use a code scanner which parses the C source files and generates the wrappers
+ automatically in another C source file.
+\end_layout
+
+\begin_layout Enumerate
+Use a library like libffi that bridges interpreted and compiled code at
+ the level of the hardward call stack.
+\end_layout
+
+\begin_layout Standard
+Each has it's benefits and drawbacks.
+ The benefits for some are clearly in the time gained by maintaining less
+ of the interface code ourselves.
+ Many of the drawbacks are specific to each of the methods.
+\end_layout
+
+\begin_layout Enumerate
+Writting all C functions with Lua's preferred function signature.
+ 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+The C code has most likely been written already.
+ A full rewrite wastes too much time.
+\end_layout
+
+\begin_layout Enumerate
+It's probably not obvious how to re-implement existing code around Lua's
+ virtual machine.
+\end_layout
+
+\begin_layout Enumerate
+If a scripting language change is desired (say, to Python) we have to rewrite
+ all the C code again.
+\end_layout
+
+\begin_layout Enumerate
+Limits possible designs to those that can be easily respresented in the
+ virtual machine.
+\end_layout
+
+\begin_layout Enumerate
+Using Lua's virtual call stack for everything will reduce performance compared
+ to using the hardware's true call stack for most things.
+\end_layout
+
+\end_deeper
+\begin_layout Enumerate
+Writting wrapper functions around C functions manually.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+May be time expensive depending on how much C code you want to interface.
+\end_layout
+
+\begin_layout Enumerate
+Must be maintained, especially whenever C functions change the number of
+ arguments (arity) or the type of any one argument.
+\end_layout
+
+\begin_layout Enumerate
+This hurts development time and inhibits otherwise good developments in
+ the C code's API simply to avoid the required changes in wrapper code.
+\end_layout
+
+\begin_layout Enumerate
+It's tedious and boring.
+\end_layout
+
+\end_deeper
+\begin_layout Enumerate
+Using a code scanner to generate wrapper functions.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Parsing C code is difficult (C++ code even more so) and code scanners often
+ fail to parse valid code.
+\end_layout
+
+\begin_layout Enumerate
+Limits writting C code in a way that is easily parsed by the scanner.
+ 
+\end_layout
+
+\begin_layout Enumerate
+Forces the file-by-file separation of the code we want wrapped from the
+ rest that we do not.
+\end_layout
+
+\begin_layout Enumerate
+The scanner must be rerun every time we make changes to the C functions
+ we want wrappers for.
+\end_layout
+
+\begin_layout Enumerate
+Requires extra build steps which may be difficult with certain toolchains
+ (like GNU Autotools).
+\end_layout
+
+\end_deeper
+\begin_layout Enumerate
+Using a machine level foreign-function interface library.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Working at a much lower level (the machine level) than may be suitable for
+ many use cases.
+\end_layout
+
+\begin_layout Enumerate
+Though libffi supports many architectures and operating systems, it does
+ not support every combination of architecture and operating system.
+\end_layout
+
+\begin_layout Enumerate
+There are many machines on which the code will not work even if libffi can
+ be built on the machine's provided C compiler, which is not always the
+ case.
+\end_layout
+
+\begin_layout Enumerate
+We are tied to a fairly heavy dependency that will limit code portability.
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+There's at least one common pitfall that all of these methods have in common:
+ they are all, in their own way, intrusive; they make claims on the design
+ of our project, how code will be written, or limit the machines it can
+ be ported to.
+ In designing an alternative to all of the methods discussed above it was
+ a primary goal that the proposed solution should be non-intrusive as far
+ as possible.
+ This goal is outlined by the following principles:
+\end_layout
+
+\begin_layout Itemize
+There should be no external dependencies, either another program or any
+ library other the standard libraries provided by C++ and the language features
+ alone.
+\end_layout
+
+\begin_layout Itemize
+There should be few to no limitations on the kinds of C functions that can
+ be bound, either by limiting the number of arguments the function has or
+ the types that those arguments can take on.
+\end_layout
+
+\begin_layout Itemize
+It should make no assumptions about the structure of the project or the
+ style that code is written in.
+\end_layout
+
+\begin_layout Itemize
+It should not require much effort or lines of code to bind C functions.
+\end_layout
+
+\begin_layout Section*
+What does the ideal solution look like?
+\end_layout
+
+\begin_layout Standard
+In terms of how we would 
+\emph on
+like
+\emph default
+ to write a binding of a C function, what is the least intrusive? The very
+ least you 
+\emph on
+must
+\emph default
+ do is to indicate which function to bind to Lua's virtual machine.
+ It could look like a single line
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+wrapper(vm, function);
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Such a wrapper would have to recognize the function's signature and generate
+ an appropriate wrapper for Lua that is tailored to its preferred signature.
+ The wrapper would need to convert arguments on Lua's call stack to the
+ equivalent C types, use them as arguments when calling the function, and
+ then push the result, if any, back onto the stack.
+\end_layout
+
+\begin_layout Section*
+Approaching the problem with templates
+\end_layout
+
+\begin_layout Standard
+When considering an interface like the one above, we might consider using
+ function overloading.
+ That is, in C++ two different functions can have the same name if their
+ parameters are different, which is to say, they have different signatures.
+ So if we could, hypothetically, create a wrapper that was aware of every
+ possible function signature then we could wrap any possible C function.
+ In practice it is highly impractical to write each one of these overloads
+ by hand.
+ Consider that any function's arity (its number of arguments) has no upper
+ bound.
+ Nor is there a limit to the data types that any given argument can assume.
+ Suppose that we did limit these parameters: say we have to handle at most
+ 
+\begin_inset Formula $n$
+\end_inset
+
+ arguments and as few as zero, and that each argument can take on as many
+ as 
+\begin_inset Formula $k$
+\end_inset
+
+ data types.
+ Furthermore we have to handle the function's return type.
+ This would entail overloading the wrapper more than 
+\begin_inset Formula $k^{n+1}$
+\end_inset
+
+ times.
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+The precise calculation is 
+\begin_inset Formula $\sum k^{a+1}$
+\end_inset
+
+ for each function with arity 
+\begin_inset Formula $a$
+\end_inset
+
+ going from 
+\begin_inset Formula $0$
+\end_inset
+
+ to 
+\begin_inset Formula $n$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+ This is bad.
+ Not only would we have to write far too many overloads, we would also be
+ rewriting what is basically the same code each time, varying only in the
+ two parameters, 
+\begin_inset Formula $n$
+\end_inset
+
+ and 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ It also imposes a limit which breaks one of the design principles.
+\end_layout
+
+\begin_layout Standard
+A substantial improvement can be made if we instead look to using templates
+ with full template specialization.
+ Rewrite the wrapper interface to 
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template <typename F> int wrapper(lua_State *vm, F function);
+\end_layout
+
+\end_inset
+
+Template specialization for each F would be just as complex as the previous
+ attempt with function overloading.
+ A more tractable approach multiplies the wrappers in the function arity.
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template <typename Res, typename Arg>
+\end_layout
+
+\begin_layout Plain Layout
+
+int wrapper(lua_State *vm, Res function(Arg));
+\end_layout
+
+\begin_layout Plain Layout
+
+template <typename Res, typename Arg1, typename Arg2>
+\end_layout
+
+\begin_layout Plain Layout
+
+int wrapper(lua_State *vm, Res function(Arg1, Arg2));
+\end_layout
+
+\begin_layout Plain Layout
+
+// etc, for 3, 4 or more arguments
+\end_layout
+
+\end_inset
+
+The difference between this and the previous is that the wrapper can inspect
+ each of the argument types and the return type.
+ We have abstracted away from the arguments' data types and reduced the
+ problem to the arity of the function, 
+\begin_inset Formula $n$
+\end_inset
+
+.
+ We would still need to write these 
+\begin_inset Formula $n$
+\end_inset
+
+ wrappers and they would still be basically the same code up to the number
+ of arguments.
+ That 
+\begin_inset Formula $n$
+\end_inset
+
+ represents the largest arity function supported by our solution still breaks
+ one of our design principles.
+ Also, we still have to convert the values from Lua's call stack to each
+ argument and push the result onto the stack after converting it to a type
+ Lua accepts.
+ We will return to these problems shortly and for now concentrate on further
+ reducing the problem stemming from function arity.
+\end_layout
+
+\begin_layout Standard
+Anyone familiar with the variadic template feature of C++ will recognize
+ it's applicable to the problem just stated.
+ Just as templates abstracted away from the type of each argument to the
+ function, variadic templates allow us to abstract away from the arity of
+ the function as well.
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template <typename Res, typename...
+ Args>
+\end_layout
+
+\begin_layout Plain Layout
+
+int wrapper(lua_State *vm, Res function(Args...));
+\end_layout
+
+\end_inset
+
+Now, rather than write 
+\begin_inset Formula $n$
+\end_inset
+
+ template specializations of the wrapper, we only need to write it once.
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+In actuality we require 4 specializations because the void return value
+ is unique, as is the case of functions belonging to a class.
+ The same goes for every prior interface, but we elide these details for
+ brevity.
+ Also of historical note is that the original implementation did not use
+ variadic templates, because C++11 did not exist at the time.
+ The original method will be discussed in an appendix.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Converting data types between languages
+\end_layout
+
+\begin_layout Standard
+Lua provides a minimal C interface for accessing values that are sitting
+ on its virtual call stack.
+ When a function is called from Lua it pushes the arguments onto this stack
+ before calling the function.
+ If that function is written in C it must be of the lua_CFunction signature
+ and it's the responsability of the C code to convert its arguments from
+ the stack and push any values it intends to return to Lua.
+ The 
+\begin_inset Quotes eld
+\end_inset
+
+stack
+\begin_inset Quotes erd
+\end_inset
+
+ here is a bit of a misnomer since random access via stack indexing is supported.
+ Moreover, Lua provides C functions of the form 
+\emph on
+pushinteger
+\emph default
+, 
+\emph on
+pushstring
+\emph default
+, and 
+\emph on
+pushnumber
+\emph default
+ (for floating-point numbers) as well as 
+\emph on
+tointeger
+\emph default
+, 
+\emph on
+tostring
+\emph default
+, and 
+\emph on
+tonumber
+\emph default
+ for converting stack values with primitive data types.
+ However, being written in pure C there is no support for the kind of type
+ abstraction that C++ gives us with templates and overloaded functions.
+ Having these would go a long way to completing our solution.
+ So as a first step we can create the abstraction mechanism that we want
+ around the partial interface that Lua already provides.
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template <typename T> void push(lua_State *vm, T value);
+\end_layout
+
+\begin_layout Plain Layout
+
+template <typename T> T to(lua_State *vm, int index);
+\end_layout
+
+\end_inset
+
+Using template specialization again we can direct C++ to the appropriate
+ Lua stack 
+\emph on
+push/to
+\emph default
+ from inside of our wrapper interface.
+ The precise details of each specialization are unimportant.
+ It is worth remarking how these functions act as rules for mapping from
+ C data types to Lua data types.
+ The latter has a dearth of primitive data types and the former has plenty
+ of qualifiers applicable to its types.
+ So, from a logical point of view, this would be a many-to-one mapping rather
+ than a correspondence, where many C data types will map to the same Lua
+ data type.
+ 
+\end_layout
+
+\begin_layout Section*
+Putting the pieces together
+\end_layout
+
+\begin_layout Standard
+So long as we have 
+\emph on
+push/to
+\emph default
+ implemented for all the data types we wish to support in the arguments
+ of the C functions to be wrapped, we can fully define our wrapper interface
+ in a variadic template.
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template <typename Res, typename...
+ Args>
+\end_layout
+
+\begin_layout Plain Layout
+
+int wrapper(lua_State *vm, Res function(Args...)) {
+\end_layout
+
+\begin_layout Plain Layout
+
+	int index = sizeof...(Args);
+\end_layout
+
+\begin_layout Plain Layout
+
+	push<Res>(vm, function(to<Args>(vm, index--)...));
+\end_layout
+
+\begin_layout Plain Layout
+
+	return 1;
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+This is not exactly the lua_CFunction signature since it has a second argument.
+ It can easily be made into this signature using another feature, C++ anonymous
+ functions (a.k.a lambda functions.)
+\begin_inset listings
+lstparams "language={C++}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+[](lua_State *vm)->int{ return wrapper(vm, &function); }
+\end_layout
+
+\end_inset
+
+In practice it is more convenient to pack this code into a preprocessor
+ macro.
+ The lambda above can be used anywhere that Lua wants a lua_CFunction and
+ allows a script to call any function (with the proper arguments) and receive
+ its return value.
+\end_layout
+
+\begin_layout Standard
+Our solution has many advantages over the others discussed initially.
+\end_layout
+
+\begin_layout Itemize
+There is no limit on the arity of functions we can create wrappers for.
+\end_layout
+
+\begin_layout Itemize
+The type system is extensible by further specialization of the 
+\emph on
+push/to
+\emph default
+ stack manipulators.
+ So there is no hard limit on the data types we can take as arguments.
+\end_layout
+
+\begin_layout Itemize
+Unlike code scanners, which are error prone, we are using the compiler itself
+ to inspect the code, which always parses C++ code correctly.
+\end_layout
+
+\begin_layout Itemize
+It turns out not to be difficult to extend this solution to C++ class member
+ functions or to support arguments passed by reference or pointer (in most
+ cases).
+\end_layout
+
+\begin_layout Itemize
+All of the additional functions created for the wrappers are small enough
+ to be inlined away at compile time.
+ So there is no additional function call overhead, nor is there excessive
+ memory used in the resulting binary.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Appendix 1
+\end_layout
+
+\begin_layout Standard
+Since this project was completed, a number of Lua modules have been created
+ with it, providing interfaces to C code that often extends the Lua language
+ with features it does not possess by default.
+ I list only a few of them here.
+\end_layout
+
+\begin_layout Standard
+\begin_inset VSpace bigskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="10" columns="2">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="left" valignment="top" width="40page%">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Module
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+pthread
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+An interface to POSIX threads, the standard for Unix systems.
+ Provides Lua with true multi-threading, mutual exclusion locks, and condition
+ variables.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+thread
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Similar to pthreads but uses the more portable C++11 standard for threading.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+random
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A random number generator capable of using various engines (mt19937, ranlux24,
+ ranlux48, knuth_b) as well as supporting many common distributions (poisson,
+ binomial, 
+\begin_inset Formula $\Gamma$
+\end_inset
+
+, normal, 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+, etc).
+ Based on the C++11 standard.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Creating and manipulating contiguous areas of system memory for POD types.
+ Also can encode and decode strings of UTF-8 strings for integer types.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+regex
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Pattern matching with regular expressions.
+ Based on the C++11 standard.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+complex
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Creating and working with complex numbers and arrays of complex numbers.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+blas
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Calling BLAS subroutines from Lua, in Fortran through its C binding.
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+lapack
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Similar to above.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SDL2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A popular cross-platform media layer.
+ Provides video, audio, input, and other media tools.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Appendix 2
+\end_layout
+
+\begin_layout Standard
+Having originally written this project before C++11 was available, the key
+ feature of variadic templates was also not available.
+ This meant that each of the 
+\begin_inset Formula $n$
+\end_inset
+
+ wrappers had to be written up to whatever 
+\begin_inset Formula $n$
+\end_inset
+
+ arguments there was a need to support.
+ While this could be done with enough time it was not a desirable task and
+ did not seem to lend itself well to refactoring.
+ Instead a method was developed to use preprocessor directives to generate
+ a pseudo-loop.
+ Since the preprocessor is run before the compiler proper, and its main
+ task is to manipulate abitrary strings within source files, it was possible
+ to generate strings of C++ code that follow regular patterns.
+ The method begins with a few rather simple macros
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#define f0(g)       g(0) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f1(g) f0(g) g(1) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f2(g) f1(g) g(2) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f3(g) f2(g) g(3) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f4(g) f3(g) g(4) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f5(g) f4(g) g(5) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f6(g) f5(g) g(6) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f7(g) f6(g) g(7) 
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f8(g) f7(g) g(8)
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f9(g) f8(g) g(9)
+\end_layout
+
+\begin_layout Plain Layout
+
+// continue the pattern as long as needed, then
+\end_layout
+
+\begin_layout Plain Layout
+
+#define f(g, n) f##n(g)
+\end_layout
+
+\end_inset
+
+So that placing f(g, 9) anywhere in the file would expand any macro g(n)
+ for n from 0 to 9.
+ For example, the macro could be 
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#define t(n) typename Arg##n,
+\end_layout
+
+\begin_layout Plain Layout
+
+#define u(n) Arg##n arg##n,
+\end_layout
+
+\end_inset
+
+in which case the use of f(t, 9) would generate a string in the source file
+ which fills out the argument list to a template with 10 arguments.
+ Similarly f(u, 9) would do the same for a function.
+ In practice it was necessary to repeat the f pattern with a different symbol
+ since two different string expansions were being nested: first for the
+ arguments lists and the second for the wrapper functions themselves.
+\end_layout
+
+\begin_layout Standard
+It is also interesting to note that when this code was superceded by the
+ variadic templates there was very little modifications necessary.
+ The entire change was made in an afternoon and only required changes to
+ one file.
+ 
+\end_layout
+
+\end_body
+\end_document

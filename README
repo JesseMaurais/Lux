@@ -20,7 +20,7 @@ place in Lua's C API that asks for it. For example, you can pass it as the
 CFunction in a luaL_Reg entry before a call to luaL_setfuncs. The lux_thunk
 function can also take C++ class functions provided that they've been specified.
 
-template <> luaL_Reg lux_Class<AnyClass>::regs[] = 
+template <> luaL_Reg lux_Class<AnyClass>::index[] = 
 	{
 	{"SomeMethod", lux_cast(AnyClass::SomeMethod)},
 	// more...

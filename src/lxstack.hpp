@@ -21,9 +21,7 @@
 template <class User, class... Args> inline
 int lux_push(lua_State *state, User data, Args... args)
 {
-	lux_push(state, data);
-	lux_push(state, args...);
-	return sizeof...(Args) + 1;
+	return lux_push(state, data) + lux_push(state, args...);
 }
 
 /// Generic push -- assume that argument is user data

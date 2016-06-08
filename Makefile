@@ -1,6 +1,6 @@
 CC=g++
-CFLAGS=-std=c++11
-SRC=lux.hpp lxalloc.hpp lxarray.hpp lxbuffs.hpp lxchars.hpp lxclass.hpp lxdebug.hpp lxerror.hpp lxstack.hpp lxstore.hpp lxthunk.hpp lxtools.hpp
+CFLAGS=-std=c++14
+SRC=lux.hpp lxalloc.hpp lxarray.hpp lxbuffs.hpp lxchars.hpp lxclass.hpp lxdebug.hpp lxerror.hpp lxstack.hpp lxtuple.hpp lxstore.hpp lxthunk.hpp lxtools.hpp
 OBJ=array.so complex.so fcntl.so fenv.so limits.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
 INC=/usr/local/include/lux/
 LIB=/usr/local/lib/lua/5.3/
