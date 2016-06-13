@@ -16,39 +16,63 @@
  */
 
 #include "lxstack.hpp"
+#include <iostream>
+#include <utility>
 
+// Case 1: basic function with no return value
+
+template <typename... Args, std::size_t... Index> inline
+int lux_thunk(lua_State *state, void fun(Args...), std::index_sequence<Index...>)
+{
+	fun(lux_to<Args>(state, Index+1)...);
+	return 0;
+}
 template <typename... Args> inline
 int lux_thunk(lua_State *state, void fun(Args...))
 {
-	register int arg = sizeof...(Args);
-	fun(lux_to<Args>(state, arg--)...);
-	return 0;
+	return lux_thunk(state, fun, std::index_sequence_for<Args...>{});
 }
 
+// Case 2: basic function has return value
+
+template <typename Res, typename... Args, std::size_t... Index> inline
+int lux_thunk(lua_State *state, Res fun(Args...), std::index_sequence<Index...>)
+{
+	return lux_push<Res>(state, fun(lux_to<Args>(state, Index+1)...));
+}
 template <typename Res, typename... Args> inline
 int lux_thunk(lua_State *state, Res fun(Args...))
 {
-	register int arg = sizeof...(Args);
-	lux_push<Res>(state, fun(lux_to<Args>(state, arg--)...));
-	return 1;
+	return lux_thunk(state, fun, std::index_sequence_for<Args...>{});
 }
 
+// Case 3: class function with no return value
+
+template <typename Obj, typename... Args, std::size_t... Index> inline
+int lux_thunk(lua_State *state, void (Obj::*fun)(Args...), std::index_sequence<Index...>)
+{
+	auto obj = lux_to<Obj*>(state, 1);
+	(obj->*fun)(lux_to<Args>(state, Index+2)...);
+	return 0;
+}
 template <typename Obj, typename... Args> inline
 int lux_thunk(lua_State *state, void (Obj::*fun)(Args...))
 {
-	register int arg = 1 + sizeof...(Args);
-	auto obj = lux_to<Obj*>(state, 1);
-	(obj->*fun)(lux_to<Args>(state, arg--)...);
-	return 0;
+	return lux_thunk(state, fun, std::index_sequence_for<Args...>());
 }
 
+// Case 4: class function has return value
+
+template <typename Res, typename Obj, typename... Args, std::size_t... Index> inline
+int lux_thunk(lua_State *state, Res (Obj::*fun)(Args...), std::index_sequence<Index...>)
+{
+	auto obj = lux_to<Obj*>(state, 1);
+	return lux_push<Res>(state, (obj->*fun)(lux_to<Args>(state, Index+2)...));
+}
 template <typename Res, typename Obj, typename... Args> inline
 int lux_thunk(lua_State *state, Res (Obj::*fun)(Args...))
 {
-	register int arg = 1 + sizeof...(Args);
-	auto obj = lux_to<Obj*>(state, 1);
-	lux_push<Res>(state, (obj->*fun)(lux_to<Args>(state, arg--)...));
-	return 1;
+	return lux_thunk(state, fun, std::index_sequence_for<Args...>());
 }
 
 // Exception safe version of the above
