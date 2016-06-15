@@ -28,7 +28,8 @@ static lua_State *call(lua_State *state)
 
 struct Thread
 {
-	typedef lux_Store<std::thread> Type;
+	typedef std::thread User;
+	typedef lux_Store<User> Type;
 
 	static int __new(lua_State *state)
 	{
@@ -139,7 +140,8 @@ struct Thread
 
 struct Mutex
 {
-	typedef lux_Store<std::mutex> Type;
+	typedef std::mutex User;
+	typedef lux_Store<User> Type;
 
 	static int __new(lua_State *state)
 	{
@@ -221,7 +223,8 @@ struct Mutex
 
 struct Condition
 {
-	typedef lux_Store<std::condition_variable_any> Type;
+	typedef std::condition_variable_any User;
+	typedef lux_Store<User> Type;
 
 	static int __new(lua_State *state)
 	{
@@ -304,7 +307,8 @@ struct Condition
 
 struct Future
 {
-	typedef lux_Store<std::future<lua_State*>> Type;
+	typedef std::future<lua_State*> User;
+	typedef lux_Store<User> Type;
 
 	static int __new(lua_State *state)
 	{

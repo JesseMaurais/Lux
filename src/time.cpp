@@ -109,19 +109,33 @@ static int l_clock_getcpuclockid(lua_State *state)
 
 static int l_clock_getres(lua_State *state)
 {
+	// Storage class for the timespec
+	using Type = lux_Class<timespec>::Type;
+	// Clock from which to fill the timespec
 	auto clockid = lux_to<clockid_t>(state, 1);
-	auto user = lux_Class<timespec>::Type::push(state);
-	int error = clock_getres(clockid, user->data);
+	// Create an object with storage
+	auto data = new (state) timespec;
+	luaL_setmetatable(state, Type::name);
+	// Call the POSIX function, error check
+	int error = clock_getres(clockid, data);
 	if (error) lux_perror(state, error);
+	// Result is timespec
 	return 1;
 }
 
 static int l_clock_gettime(lua_State *state)
 {
+	// Storage class for the timespec
+	using Type = lux_Class<timespec>::Type;
+	// Clock from which to fill the timespec
 	auto clockid = lux_to<clockid_t>(state, 1);
-	auto user = lux_Class<timespec>::Type::push(state);
-	int error = clock_gettime(clockid, user->data);
+	// Create an object with storage
+	auto data = new (state) timespec;
+	luaL_setmetatable(state, Type::name);
+	// Call the POSIX function, error check
+	int error = clock_gettime(clockid, data);
 	if (error) lux_perror(state, error);
+	// Result is timespec
 	return 1;
 }
 
@@ -172,10 +186,17 @@ static int l_timer_getoverrun(lua_State *state)
 
 static int l_timer_gettime(lua_State *state)
 {
+	// Storage class for itimerspec
+	using Type = lux_Class<itimerspec>::Type;
+	// Time from which to fill the itimerspec
 	auto timerid = lux_to<timer_t>(state, 1);
-	auto user = lux_Class<itimerspec>::Type::push(state);
-	int error = timer_gettime(timerid, user->data);
+	// Create an object with storage
+	auto data = new (state) itimerspec;
+	luaL_setmetatable(state, Type::name);
+	// Call the POSIX function, check error
+	int error = timer_gettime(timerid, data);
 	if (error) lux_perror(state);
+	// Result is itimerspec
 	return 1;
 }
 

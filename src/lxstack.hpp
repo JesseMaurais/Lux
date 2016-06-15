@@ -29,8 +29,7 @@ template <class User> inline
 int lux_push(lua_State *state, User data)
 {
 	typedef lux_Store<User> Type;
-	(void) Type::push(state, data);
-	return 1;
+	return Type::push(state, data);
 }
 
 /// Generic opt -- user data as an optional argument
@@ -386,6 +385,23 @@ FILE *lux_to<FILE *>(lua_State *state, int stack)
 	address = luaL_checkudata(state, stack, LUA_FILEHANDLE);
 	return stream->f;
 }
+
+// Partial specialization of storage class for tuples
+template <class... Args> struct lux_Store<std::tuple<Args...>>
+{
+	typedef std::tuple<Args...> User;
+
+	template <std::size_t... Index> inline
+	static int push(lua_State *state, const User &data, std::index_sequence<Index...>)
+	{
+		return lux_push(state, std::get<Index>(data)...);
+	}
+
+	static int push(lua_State *state, const User &data, int size=0)
+	{
+		return push(state, data, std::index_sequence_for<Args...>{});
+	}
+};
 
 #endif // file
 

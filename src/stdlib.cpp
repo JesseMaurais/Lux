@@ -1,5 +1,6 @@
 #include "lux.hpp"
 #include <cstdlib>
+#include <tuple>
 
 static int _div(lua_State *state)
 {

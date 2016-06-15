@@ -22,6 +22,7 @@
 #include "lxalloc.hpp"
 #include <typeinfo>
 #include <utility>
+#include <tuple>
 #include <cstdlib>
 #include <cassert>
 
@@ -117,27 +118,27 @@ template <class User> struct lux_Store : lux_Pack<User>
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User &data, int size=0)
+	static int push(lua_State *state, User &&data, int size=0)
 	{
-		auto user = new (state) Type(data);
+		new (state) Type(data);
 		luaL_setmetatable(state, Type::name);
-		return user;
+		return 1;
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User &&data, int size=0)
+	static int push(lua_State *state, User &data, int size=0)
 	{
-		auto user = new (state) Type(data);
+		new (state) Type(data);
 		luaL_setmetatable(state, Type::name);
-		return user;
+		return 1;
 	}
 
 	/// Create storage and user data
-	static Type *push(lua_State *state)
+	static int push(lua_State *state)
 	{
-		auto user = new (state) Type;
+		new (state) Type;
 		luaL_setmetatable(state, Type::name);
-		return user;
+		return 1;
 	}
 
 	/// Return data if types match or the given default
@@ -185,25 +186,24 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 	}
 
 	/// Create storage for user data and put it on the stack
-	static Type *push(lua_State *state, User *data, int size=0)
+	static int push(lua_State *state, User *data, int size=0)
 	{
 		if (data)
 		{
-			auto user = new (state) Type(data, size);
+			new (state) Type(data, size);
 			luaL_setmetatable(state, Type::name);
-			return user;
 		}
-		lua_pushnil(state);
-		return nullptr;
+		else lua_pushnil(state);
+		return 1;
 	}
 
 	/// Create storage and user data
-	static Type *push(lua_State *state, int size=1)
+	static int push(lua_State *state, int size=1)
 	{
 		auto data = new User [size];
 		auto user = new (state) Type(data, size);
 		luaL_setmetatable(state, Type::name);
-		return user;
+		return 1;
 	}
 
 	/// Return data if types match or the given default
@@ -221,10 +221,11 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 	}
 
 	/// Push with reference to owner where 'this' is on the stack
-	Type* push(lua_State *state, User *data, int size, int stack)
+	int push(lua_State *state, User *data, int size, int stack)
 	{
 		// Put data on the stack (not as owner)
-		auto user = push(state, data, - size);
+		auto user = new (state) Type(data, - size);
+		luaL_setmetatable(state, Type::name);
 		// Not null and this is an array
 		if (user and this->size not_eq 0)
 		{
@@ -250,7 +251,8 @@ template <class User> struct lux_Store<User*> : lux_Pack<User*>
 			// Remove metatable
 			lua_pop(state, 1);
 		}
-		return user;
+		else lua_pushnil(state);
+		return 1;
 	}
 
 	/// Inherit base constructor
