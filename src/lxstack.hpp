@@ -16,6 +16,8 @@
  */
 
 #include "lxstore.hpp"
+#include <utility>
+#include <tuple>
 
 /// Variadic push -- for stacking many data at once
 template <class User, class... Args> inline
@@ -386,19 +388,45 @@ FILE *lux_to<FILE *>(lua_State *state, int stack)
 	return stream->f;
 }
 
-// Partial specialization of storage class for tuples
+/* The following two 'push' functions are implemented quite differently than
+ * those above, owing to the fact that C++ forbids partial function template
+ * specialization. We get around this using partial specialization for class
+ * templates, which is permitted, and having the default 'push' call members
+ * of these classes. The default implementation for those storage classes is
+ * found in lxstore.hpp, but we specialize them for pairs and tuples and get
+ * push functions for these with any template arguments we want. Both tuples
+ * and pairs push their contents on the stack, and we only implement push so
+ * we get multiple return values in C++ correspond to multiple return values
+ * in Lua, just as one would expect.
+ */
+
+// Partial specialization of storage class for std::pair
+template <class First, class Second> struct lux_Store<std::pair<First, Second>>
+{
+	typedef std::pair<First, Second> User;
+	typedef lux_Store<User> Type;
+
+	static int push(lua_State *state, const User &data, int size=0)
+	{
+		// Call variadic push (top of this source file)
+		return lux_push(state, data.first, data.second);
+	}
+};
+
+// Partial specialization of storage class for std::tuple
 template <class... Args> struct lux_Store<std::tuple<Args...>>
 {
 	typedef std::tuple<Args...> User;
 
-	template <std::size_t... Index> inline
-	static int push(lua_State *state, const User &data, std::index_sequence<Index...>)
+	template <size_t... Index> static int push(lua_State *state, const User &data, std::index_sequence<Index...>)
 	{
+		// Call variadic push (top of this source file)
 		return lux_push(state, std::get<Index>(data)...);
 	}
 
 	static int push(lua_State *state, const User &data, int size=0)
 	{
+		// Create an index sequence for the template parameter pack
 		return push(state, data, std::index_sequence_for<Args...>{});
 	}
 };
