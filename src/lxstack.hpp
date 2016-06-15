@@ -417,6 +417,7 @@ template <class First, class Second> struct lux_Store<std::pair<First, Second>>
 template <class... Args> struct lux_Store<std::tuple<Args...>>
 {
 	typedef std::tuple<Args...> User;
+	typedef lux_Store<User> Type;
 
 	template <size_t... Index> static int push(lua_State *state, const User &data, std::index_sequence<Index...>)
 	{
