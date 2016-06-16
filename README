@@ -29,7 +29,7 @@ template <> luaL_Reg lux_Class<AnyClass>::index[] =
 
 And then, sometime after having created a Lua state (and for each state).
 
-	luaL_registerf(state, "AnyClass", lux_Class<AnyClass>::open, true);
+	lux_Class<AnyClass>::require(state, true); // "true" for global
 
 Aside from classes, Lux can also give Lua access to C style arrays and will
 allow for dealing with memory blocks in a similar way as structs and unions.
