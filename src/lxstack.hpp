@@ -17,6 +17,7 @@
 
 #include "lxstore.hpp"
 #include <utility>
+#include <string>
 #include <tuple>
 
 /// Variadic push -- for stacking many data at once
@@ -161,6 +162,15 @@ int lux_push<std::nullptr_t>(lua_State *state, std::nullptr_t)
 	return 1;
 }
 
+// Special case of C++ string class
+
+template <> inline
+int lux_push<std::string>(lua_State *state, std::string value)
+{
+	lua_pushstring(state, value.c_str());
+	return 1;
+}
+
 // Special case of C FILE handle
 
 template <> inline
@@ -274,6 +284,14 @@ FILE *lux_opt<FILE *>(lua_State *state, int stack, FILE *opt)
 	return address ? stream->f : opt;
 }
 
+// Special case of C++ string class
+
+template <> inline
+std::string lux_opt<std::string>(lua_State *state, int stack, std::string opt)
+{
+	return luaL_optstring(state, stack, opt.c_str());
+}
+
 // "to" rather than "check" counterparts in stack conversion
 
 template <> inline
@@ -373,6 +391,14 @@ const char *lux_to<const char *>(lua_State *state, int stack)
 {
 	if (lua_isstring(state, stack)) return lua_tostring(state, stack);
 	return lux_Store<char*>::to(state, stack);
+}
+
+// Special case of C++ string class
+
+template <> inline
+std::string lux_to<std::string>(lua_State *state, int stack)
+{
+	return lua_tostring(state, stack);
 }
 
 // Special case of C FILE handle
