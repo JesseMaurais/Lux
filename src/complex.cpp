@@ -284,8 +284,8 @@ extern "C" int luaopen_complex(lua_State *state)
 	// Common numeric types
 	luaL_Reg regs[] =
 	{
-	{lux_Array<float>::Type::name, lux_Complex<float>::open},
-	{lux_Array<double>::Type::name, lux_Complex<double>::open},
+	{lux_Array<float>::Store::name, lux_Complex<float>::open},
+	{lux_Array<double>::Store::name, lux_Complex<double>::open},
 	{nullptr}
 	};
 	// Register and put in module table

@@ -2,17 +2,17 @@
 #define __lxthunk__
 
 /**
- * C++ function calling with Lua stack interface using variadic templates. We
- * automatically push/to values on the Lua stack given the arity of functions
- * in C++ (that is, their number of arguments and the argument types) as well
- * as the return value, if the functions have one. There are exactly 4 cases:
- * functions with/without return values, and ones with/without class objects.
- * Additionally, we wrap these in another function which will call the others
- * but will catch any standard C++ exceptions and report them to Lua, so that
- * it's interpreter can perform a stack trace. Finally, a preprocessing macro
- * is provided to simply "cast" an arbitrary C++ function, which really means
- * wrapping it again in an anonymous (lambda) function. All the wrapping will
- * be inlined away at compile time. 
+ * C++ function calling with Lua stack interface using variadic templates.
+ * We automatically push/opt/to values on the Lua stack given the arity of
+ * functions in C++ (their number of arguments and the argument types) as
+ * well as the return value if the functions have one. There are exactly 4
+ * cases: functions with/without return values, and ones with/without class
+ * objects. Additionally we wrap these in another function which will call
+ * the others but will catch any standard C++ exceptions and report them to
+ * Lua, so that it's interpreter can perform a stack trace. Finally a
+ * preprocessing macro is provided to simply "cast" an arbitrary C++
+ * function, which really means wrapping it again in an anonymous (lambda)
+ * function. All the wrapping will be inlined away at compile time. 
  */
 
 #include "lxstack.hpp"

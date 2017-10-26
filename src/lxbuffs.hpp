@@ -14,7 +14,7 @@ struct lux_Buffer : luaL_Buffer
 		luaL_buffinit(state, this);
 	}
 
-	lux_Buffer(lua_State *state, size_t size)
+	lux_Buffer(lua_State *state, std::size_t size)
 	{
 		string = luaL_buffinitsize(state, this, size);
 	}
@@ -29,12 +29,12 @@ struct lux_Buffer : luaL_Buffer
 		luaL_addstring(this, s);
 	}
 
-	void addstring(const char *s, size_t n)
+	void addstring(const char *s, std::size_t n)
 	{
 		luaL_addlstring(this, s, n);
 	}
 
-	void addsize(size_t n)
+	void addsize(std::size_t n)
 	{
 		luaL_addsize(this, n);
 	}
@@ -49,7 +49,7 @@ struct lux_Buffer : luaL_Buffer
 		return luaL_prepbuffer(this);
 	}
 
-	char *prep(size_t n)
+	char *prep(std::size_t n)
 	{
 		return luaL_prepbuffsize(this, n);
 	}
@@ -59,7 +59,7 @@ struct lux_Buffer : luaL_Buffer
 		luaL_pushresult(this);
 	}
 
-	void push(size_t n)
+	void push(std::size_t n)
 	{
 		luaL_pushresultsize(this, n);
 	}

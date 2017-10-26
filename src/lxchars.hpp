@@ -2,28 +2,27 @@
 #define __lxchars__
 
 /**
- * Support for the Unicode Transformation Format (UTF) which is used to encode
- * and decode strings from the Universal Character Set (UCS), the standard way
- * to store and transmit text in various languages. Information on Unicode can
- * be found easily on the internet. 
+ * Support for the Unicode Transformation Format which is used to encode and
+ * decode strings from the Universal Character Set, the standard way to
+ * store and transmit text in various languages. Information on Unicode can
+ * be found easily on the internet.  Noteworthy here is that we are using
+ * the C11 functions for coding the multi byte sequence because many C++11
+ * compilers are not equiped with the headers which contain the appropriate
+ * classes. This is the current state of GCC.
  *
- * Noteworthy here is that we are using the C11 functions for coding the multi
- * byte sequence because many C++11 compilers are not equiped with the headers
- * which contain the appropriate classes. This is the current state of G++ 
- *
- * Unconventionally, we are storing the code points in arbitrary arrays rather
- * than just those of char, char16_t and char32_t. Saftey is assured by checks
- * on the bit width of the base type and by defaulting to a copying loop where
- * the type is not a perfect match. 
+ * We are unconventionally storing the code points in arbitrary arrays
+ * rather than just those of char, char16_t and char32_t. Safety is assured
+ * by checks on the bit width of the base type and by defaulting to a copy
+ * loop where the type is not a perfect match. 
  */
 
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <wchar.h>
-#include <uchar.h>
+#include <cwchar>
+#include <cuchar>
 
-struct lux_Chars : mbstate_t // portable?
+struct lux_Chars : std::mbstate_t
 {
 	lux_Chars(void)
 	{
@@ -38,122 +37,128 @@ struct lux_Chars : mbstate_t // portable?
 
 	void reset(void)
 	{
-		memset(this, 0, sizeof(mbstate_t));
+		std::memset(this, 0, sizeof(std::mbstate_t));
 	}
 
 	// Check if initial state
 
 	bool isinit(void)
 	{
-		return mbsinit(this) not_eq 0;
+		return std::mbsinit(this) != 0;
 	}
 
 	// Char length in bytes
 
-	int charsize(const char *str, size_t max = MB_CUR_MAX)
+	std::ptrdiff_t charsize(const char *str, std::size_t max = MB_CUR_MAX)
 	{
-		return mbrlen(str, max, this);
+		return std::mbrlen(str, max, this);
 	}
 
 	// String length in chars
 
-	int stringsize(const char *str, size_t max)
+	std::ptrdiff_t stringsize(const char *str, std::size_t max)
 	{
-		int sz, n;
-		for (n = 0; n < max and str[n]; n += sz)
+		std::size_t m;
+		for (auto n = m = 0; n < max and str[n]; ++m)
 		{
-			sz = charsize(str + n, max - n);
+			auto sz = charsize(str + n, max - n);
 			if (sz < 0) return sz;
+			n += sz;
 		}
-		return n;
+		return m;
 	}
 
 	// Char conversion for wide-char
 
-	int fromchar(char *dst, wchar_t src)
+	std::ptrdiff_t fromchar(char *dst, wchar_t src)
 	{
-		return wcrtomb(dst, src, this);
+		return std::wcrtomb(dst, src, this);
 	}
 
-	int tochar(wchar_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	std::ptrdiff_t tochar(wchar_t *dst, const char *src, std::size_t max = MB_CUR_MAX)
 	{
-		return mbrtowc(dst, src, max, this);
+		return std::mbrtowc(dst, src, max, this);
 	}
 
 	// Char conversion for UTF-16
 
-	int fromchar(char *dst, char16_t src)
+	std::ptrdiff_t fromchar(char *dst, char16_t src)
 	{
-		return c16rtomb(dst, src, this);
+		return std::c16rtomb(dst, src, this);
 	}
 
-	int tochar(char16_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	std::ptrdiff_t tochar(char16_t *dst, const char *src, std::size_t max = MB_CUR_MAX)
 	{
-		return mbrtoc16(dst, src, max, this);
+		return std::mbrtoc16(dst, src, max, this);
 	}
 
 	// Char conversion for UTF-32
 
-	int fromchar(char *dst, char32_t src)
+	std::ptrdiff_t fromchar(char *dst, char32_t src)
 	{
-		return c32rtomb(dst, src, this);
+		return std::c32rtomb(dst, src, this);
 	}
 
-	int tochar(char32_t *dst, const char *src, size_t max = MB_CUR_MAX)
+	std::ptrdiff_t tochar(char32_t *dst, const char *src, std::size_t max = MB_CUR_MAX)
 	{
-		return mbrtoc32(dst, src, max, this);
+		return std::mbrtoc32(dst, src, max, this);
 	}
 
 	// String conversion base case
 
-	int fromstring(char *dst, const char *src, size_t len)
+	std::ptrdiff_t fromstring(char *dst, const char *src, std::size_t len)
 	{
-		strncpy(dst, src, len);
+		std::strncpy(dst, src, len);
 		return len;
 	}
 
-	int tostring(char *dst, const char *src, size_t len)
+	std::ptrdiff_t tostring(char *dst, const char *src, std::size_t len)
 	{
-		strncpy(dst, src, len);
+		std::strncpy(dst, src, len);
 		return len;
 	}
 
 	// String conversion general
 
 	template <class Char>
-	int fromstring(char *dst, const Char *src, size_t len)
+	std::ptrdiff_t fromstring(char *dst, const Char *src, std::size_t len)
 	{
-		char str[MB_CUR_MAX];
-		int sz, n, m;
-		for (n = m = 0; n < len and src[n]; m += sz, ++n)
+		std::size_t m;
+		char buf[MB_CUR_MAX];
+		for (auto n = m = 0; n < len and src[n]; ++n)
 		{
-			sz = fromchar(str, src[n]);
+			auto sz = fromchar(buf, src[n]);
 			if (sz < 0) return sz;
-			fromstring(dst + m, str, sz);
+			std::strncpy(dst + m, buf, sz);
+			m += sz;
 		}
 		return m;
 	}
 
 	template <class Char>
-	int tostring(Char *dst, const char *src, size_t len)
+	std::ptrdiff_t tostring(Char *dst, const char *src, std::size_t len)
 	{
-		int sz, n, m;
-		for (n = m = 0; n < len and src[n]; n += sz, ++m)
+		std::size_t m;
+		for (auto n = m = 0; n < len and src[n]; ++m)
 		{
-			sz = tochar(dst + m, src + n, len - n);
-			// Surrogate pairs recall at same src[n]
-			if (sz < 0) if (sz == SURROGATE) sz = 0;
-			else return sz; // Otherwise an error
+			auto sz = tochar(dst + m, src + n, len - n);
+			if (sz < 0)
+			{
+				// Surrogate pairs recall at same src[n]
+				if (SURROGATE == sz) continue;
+				else return sz; // error
+			}
+			n += sz;
 		}
 		return m;
 	}
 
 	// Generic 'array' conversion for any integers
 
-	template <class User>
-	int from(char *dst, const User *src, size_t len)
+	template <class Char>
+	std::ptrdiff_t from(char *dst, const Char *src, std::size_t len)
 	{
-		switch (sizeof(User))
+		switch (sizeof(Char))
 		{
 		case sizeof(char):
 			return fromcast<char>(dst, src, len);
@@ -166,10 +171,10 @@ struct lux_Chars : mbstate_t // portable?
 		}
 	}
 
-	template <class User>
-	int to(User *dst, const char *src, size_t len)
+	template <class Char>
+	std::ptrdiff_t to(Char *dst, const char *src, std::size_t len)
 	{
-		switch (sizeof(User))
+		switch (sizeof(Char))
 		{
 		case sizeof(char):
 			return tocast<char>(dst, src, len);
@@ -187,13 +192,13 @@ struct lux_Chars : mbstate_t // portable?
 	// Casting integer to char arrays is not strictly type safe
 
 	template <class Char, class User>
-	int fromcast(char *dst, const User *src, size_t len)
+	std::ptrdiff_t fromcast(char *dst, const User *src, std::size_t len)
 	{
 		return fromstring(dst, (const Char *) src, len);
 	}
 
 	template <class Char, class User>
-	int tocast(User *dst, const char *src, size_t len)
+	std::ptrdiff_t tocast(User *dst, const char *src, std::size_t len)
 	{
 		return tostring((Char *) dst, src, len);
 	}
@@ -201,19 +206,19 @@ struct lux_Chars : mbstate_t // portable?
 	// Copying integer to char arrays is safe but slower
 
 	template <class Char, class User>
-	int fromcopy(char *dst, const User *src, size_t len)
+	std::ptrdiff_t fromcopy(char *dst, const User *src, std::size_t len)
 	{
 		Char buf[len];
-		for (int n = 0; n < len; ++n) buf[n] = src[n];
+		for (decltype(len) n = 0; n < len; ++n) buf[n] = src[n];
 		return fromstring(dst, buf, len);
 	}
 
 	template <class Char, class User>
-	int tocopy(User *dst, const char *src, size_t len)
+	std::ptrdiff_t tocopy(User *dst, const char *src, std::size_t len)
 	{
 		Char buf[len];
-		int sz = tostring(buf, src, len);
-		for (int n = 0; n < sz; ++n) dst[n] = buf[n];
+		auto sz = tostring(buf, src, len);
+		for (decltype(sz) n = 0; n < sz; ++n) dst[n] = buf[n];
 		return sz;
 	}
 };
@@ -229,17 +234,17 @@ template <class Char> struct lux_Coder
 	/// Construct this array from a string
 	static int decode(lua_State *state)
 	{
-		size_t size;
-		lux_Chars shift;
 		// Get UTF-8 encoded string and it's size in bytes
-		const char *string = lua_tolstring(state, 1, &size);
+		std::size_t size;
+		auto string = lua_tolstring(state, 1, &size);
 		// Find the number of multibyte characters
-		int length = shift.stringsize(string, size);
+		lux_Chars shift;
+		auto length = shift.stringsize(string, size);
 		// Check the string for encoding errors
 		if (length < 0) return lux_argerror(state, 1);
-		else shift.reset();
+		shift.reset();
 		// Create array and convert
-		Char *data = new Char [length];
+		auto data = new Char [length];
 		size = shift.to(data, string, length);
 		// Put the array on the stack
 		Type::push(state, data, size);
@@ -249,9 +254,9 @@ template <class Char> struct lux_Coder
 	/// Convert this array to a string
 	static int encode(lua_State *state)
 	{
-		Type *user = Type::check(state);
+		auto user = Type::check(state);
 		// Pointers not supported
-		int size = abs(user->size);
+		auto size = std::abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Store UTF-8 characters
 		char data[size * MB_CUR_MAX];
@@ -267,39 +272,44 @@ template <class Char> struct lux_Coder
 	/// Write as string to a file
 	static int puts(lua_State *state)
 	{
-		Type *user = Type::check(state, 1);
+		auto user = Type::check(state, 1);
 		// Pointers not supported
-		int size = abs(user->size);
+		auto size = std::abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Stream that we will write to
-		FILE *file = lux_opt(state, 2, stdout);
+		auto file = lux_opt(state, 2, stdout);
 		// Store UTF-8 characters
-		char data[size * MB_CUR_MAX];
-		// Conversion
 		lux_Chars shift;
+		char data[MB_CUR_MAX*size];
 		size = shift.from(data, user->data, size);
 		if (size < 0) return lux_perror(state);
-		// Using fputs on given file
 		data[size] = '\0';
-		fputs(data, file);
-		// Return the number of bytes
-		lua_pushinteger(state, size);
-		return 1;
+		// Using fputs on given file
+		if (0 < std::fputs(data, file))
+		{
+			// Return the number of bytes
+			lua_pushinteger(state, size);
+			return 1;
+		}
+		return 0;
 	}
 
 	/// Read as string from a file
 	static int gets(lua_State *state)
 	{
-		Type *user = Type::check(state, 1);
+		auto user = Type::check(state, 1);
 		// Pointers not supported
-		int size = abs(user->size);
+		auto size = std::abs(user->size);
 		lux_argcheck(state, 1, 0 < size);
 		// Stream that we will read from
-		FILE *file = lux_opt(state, 2, stdin);
+		auto file = lux_opt(state, 2, stdin);
 		// Store UTF-8 characters
-		char data[size * MB_CUR_MAX];
+		char data[MB_CUR_MAX*size];
 		// Using fgets on given file
-		fgets(data, sizeof(data), file);
+		if (not std::fgets(data, sizeof(data), file))
+		{
+			return 1;
+		}
 		// Conversion
 		lux_Chars shift;
 		size = shift.to(user->data, data, sizeof(data));

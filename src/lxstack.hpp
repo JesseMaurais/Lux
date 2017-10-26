@@ -2,17 +2,17 @@
 #define __lxstack__
 
 /**
- * For purposes of template programming, we want more indirect access to the
+ * For purposes of template programming we want more indirect access to the
  * Lua stack operation functions. We need compile-time deduction of the type
- * of argument and for the C++ compiler to select the correct push/to at the
- * time it fills out the template. We also want in-place substitution of the
- * selected functions (that is, inline) since they do nothing more than hint
- * which Lua stack function to use. All these template push/opt/to functions
- * should be inlined away at compile time so that they do not imply any more
- * function call overhead. They should be thought of as rules which map from
- * C++ types to Lua types rather than usual functions. Any types not already
- * represented here can be implemented elsewhere and if they are seen by Lux
- * then they will also be substituted where appropriate.
+ * of argument and for the C++ compiler to select the correct push/opt/to at
+ * the time it fills out the template. We also want in-place substitution of
+ * the selected functions (that is, inline) since they do nothing more than
+ * hint which Lua stack function to use. All these template push/opt/to
+ * function should be inlined away at compile time so that they do not imply
+ * any more function call overhead. They should be thought of as rules which
+ * map from C++ types to Lua types rather than usual functions. Any types
+ * not already represented here can be implemented elsewhere and if they are
+ * seen by Lux then they will also be substituted where appropriate.
  */
 
 #include "lxstore.hpp"
@@ -21,37 +21,37 @@
 #include <tuple>
 
 /// Variadic push -- for stacking many data at once
-template <class User, class... Args> inline
-int lux_push(lua_State *state, User data, Args... args)
+template <class Type, class... Args> inline
+int lux_push(lua_State *state, Type data, Args... args)
 {
 	return lux_push(state, data) + lux_push(state, args...);
 }
 
 /// Generic push -- assume that argument is user data
-template <class User> inline
-int lux_push(lua_State *state, User data)
+template <class Type> inline
+int lux_push(lua_State *state, Type data)
 {
-	typedef lux_Store<User> Type;
-	return Type::push(state, data);
+	typedef lux_Store<Type> Store;
+	return Store::push(state, data);
 }
 
 /// Generic opt -- user data as an optional argument
-template <class User> inline
-User lux_opt(lua_State *state, int stack, User opt)
+template <class Type> inline
+Type lux_opt(lua_State *state, int stack, Type opt)
 {
-	typedef lux_Store<User> Type;
-	return Type::opt(state, stack, opt);
+	typedef lux_Store<Type> Store;
+	return Store::opt(state, stack, opt);
 }
 
 /// Generic to -- convert user data at given stack index
-template <class User> inline
-User lux_to(lua_State *state, int stack)
+template <class Type> inline
+Type lux_to(lua_State *state, int stack)
 {
-	typedef lux_Store<User> Type;
-	return Type::to(state, stack);
+	typedef lux_Store<Type> Store;
+	return Store::to(state, stack);
 }
 
-// Full function template specialization of push/to for POD types
+// Full function template specialization of push/opt/to for POD types
 
 template <> inline
 int lux_push<bool>(lua_State *state, bool value)
@@ -174,7 +174,7 @@ int lux_push<std::string>(lua_State *state, std::string value)
 // Special case of C FILE handle
 
 template <> inline
-int lux_push<FILE*>(lua_State *state, FILE *value)
+int lux_push<std::FILE*>(lua_State *state, std::FILE *value)
 {
 	auto stream = new (state) luaL_Stream;
 	stream->f = value;
@@ -274,7 +274,7 @@ unsigned long long lux_opt(lua_State *state, int stack, unsigned long long opt)
 // Special case of C File handle
 
 template <> inline
-FILE *lux_opt<FILE *>(lua_State *state, int stack, FILE *opt)
+std::FILE *lux_opt<std::FILE *>(lua_State *state, int stack, std::FILE *opt)
 {
 	union {
 	 luaL_Stream *stream;
@@ -404,7 +404,7 @@ std::string lux_to<std::string>(lua_State *state, int stack)
 // Special case of C FILE handle
 
 template <> inline
-FILE *lux_to<FILE *>(lua_State *state, int stack)
+std::FILE *lux_to<std::FILE *>(lua_State *state, int stack)
 {
 	union {
 	 luaL_Stream *stream;
@@ -415,10 +415,10 @@ FILE *lux_to<FILE *>(lua_State *state, int stack)
 }
 
 /* The following two 'push' functions are implemented quite differently than
- * those above, owing to the fact that C++ forbids partial function template
+ * those above owing to the fact that C++ forbids partial function template
  * specialization. We get around this using partial specialization for class
  * templates, which is permitted, and having the default 'push' call members
- * of these classes. The default implementation for those storage classes is
+ * of these classes. The default implementation for those storage classes are
  * found in lxstore.hpp, but we specialize them for pairs and tuples and get
  * push functions for these with any template arguments we want. Both tuples
  * and pairs push their contents on the stack, and we only implement push so
@@ -429,10 +429,10 @@ FILE *lux_to<FILE *>(lua_State *state, int stack)
 // Partial specialization of storage class for std::pair
 template <class First, class Second> struct lux_Store<std::pair<First, Second>>
 {
-	typedef std::pair<First, Second> User;
-	typedef lux_Store<User> Type;
+	typedef std::pair<First, Second> Type;
+	typedef lux_Store<Type> Store;
 
-	static int push(lua_State *state, const User &data, int size=0)
+	static int push(lua_State *state, const Type &data, int size=0)
 	{
 		// Call variadic push (top of this source file)
 		return lux_push(state, data.first, data.second);
@@ -442,16 +442,17 @@ template <class First, class Second> struct lux_Store<std::pair<First, Second>>
 // Partial specialization of storage class for std::tuple
 template <class... Args> struct lux_Store<std::tuple<Args...>>
 {
-	typedef std::tuple<Args...> User;
-	typedef lux_Store<User> Type;
+	typedef std::tuple<Args...> Type;
+	typedef lux_Store<Type> Store;
 
-	template <size_t... Index> static int push(lua_State *state, const User &data, std::index_sequence<Index...>)
+	template <std::size_t... Index>
+	static int push(lua_State *state, const Type &data, std::index_sequence<Index...>)
 	{
 		// Call variadic push (top of this source file)
 		return lux_push(state, std::get<Index>(data)...);
 	}
 
-	static int push(lua_State *state, const User &data, int size=0)
+	static int push(lua_State *state, const Type &data, std::ptrdiff_t size=0)
 	{
 		// Create an index sequence for the template parameter pack
 		return push(state, data, std::index_sequence_for<Args...>{});

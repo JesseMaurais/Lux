@@ -32,13 +32,13 @@
 /// Imitate the behavior of perror in a given state
 static inline int lux_perror(lua_State *state, int error = errno)
 {
-	return luaL_error(state, "%s", strerror(error));
+	return luaL_error(state, "%s", std::strerror(error));
 }
 
 /// Report an errno string as coming from a function argument
 static inline int lux_argerror(lua_State *state, int arg=1)
 {
-	return luaL_argerror(state, arg, strerror(errno));
+	return luaL_argerror(state, arg, std::strerror(errno));
 }
 
 /// When you want to report the failed condition as the string message

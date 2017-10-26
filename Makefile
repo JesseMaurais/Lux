@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-std=c++14
+CFLAGS=-std=c++17 -I/usr/include/lua5.3
 SRC=lux.hpp lxalloc.hpp lxarray.hpp lxbuffs.hpp lxchars.hpp lxclass.hpp lxdebug.hpp lxerror.hpp lxstack.hpp lxstore.hpp lxthunk.hpp lxtools.hpp
 OBJ=array.so complex.so fcntl.so fenv.so limits.so locale.so mqueue.so pthread.so random.so regex.so signal.so stdio.so stdlib.so termios.so thread.so time.so unistd.so
 INC=/usr/local/include/lux/

@@ -270,12 +270,12 @@ extern "C" int luaopen_limits(lua_State *state)
 	// Common numeric types
 	luaL_Reg regs[] =
 	{
-	{lux_Array<int>::Type::name, lux_Limits<int>::open},
-	{lux_Array<char>::Type::name, lux_Limits<char>::open},
-	{lux_Array<short>::Type::name, lux_Limits<short>::open},
-	{lux_Array<long>::Type::name, lux_Limits<long>::open},
-	{lux_Array<float>::Type::name, lux_Limits<float>::open},
-	{lux_Array<double>::Type::name, lux_Limits<double>::open},
+	{lux_Array<int>::Store::name, lux_Limits<int>::open},
+	{lux_Array<char>::Store::name, lux_Limits<char>::open},
+	{lux_Array<short>::Store::name, lux_Limits<short>::open},
+	{lux_Array<long>::Store::name, lux_Limits<long>::open},
+	{lux_Array<float>::Store::name, lux_Limits<float>::open},
+	{lux_Array<double>::Store::name, lux_Limits<double>::open},
 	{nullptr}
 	};
 	// Register and put in module table
