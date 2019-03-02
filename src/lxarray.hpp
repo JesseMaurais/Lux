@@ -162,7 +162,7 @@ template <class Type> struct lux_Array
 		for (decltype(size) item = 0; item < size; ++item)
 		{
 			// Add separator only after first
-			if (0 == item) buffer.addstring(", ");
+			if (0 != item) buffer.addstring(", ");
 			// Convert each element to string
 			lux_push(state, user->data[item]);
 			if (meta) // use __tostring
