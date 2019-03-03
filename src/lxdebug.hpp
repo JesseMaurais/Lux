@@ -1,6 +1,8 @@
 #ifndef __lxdebug__
 #define __lxdebug__
 
+#include "lua.hpp"
+
 struct lux_Debug : lua_Debug
 {
 	bool getstack(lua_State *state, int level)
@@ -20,4 +22,3 @@ struct lux_Debug : lua_Debug
 };
 
 #endif // file
-

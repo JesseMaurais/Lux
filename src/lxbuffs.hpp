@@ -2,6 +2,7 @@
 #define __lxbuffs__
 
 #include "lua.hpp"
+#include <cstddef>
 
 // Just a wrapper around the Lua C buffer for syntactic sugar
 
@@ -66,4 +67,3 @@ struct lux_Buffer : luaL_Buffer
 };
 
 #endif // file
-

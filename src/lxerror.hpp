@@ -26,6 +26,7 @@
  *	lux_argcheck(state, arg, 0 < size);
  */
 
+#include "lua.hpp"
 #include <cstring>
 #include <cerrno>
 

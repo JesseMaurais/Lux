@@ -11,6 +11,7 @@
 #include "lxalloc.hpp"
 #include "lxstore.hpp"
 #include "lxstack.hpp"
+#include "lxerror.hpp"
 
 /// Export C++ classes/structs/unions to Lua
 
@@ -154,4 +155,3 @@ template <class User> luaL_Reg lux_Class<User>::index[] = {{nullptr}};
 
 
 #endif // file
-
