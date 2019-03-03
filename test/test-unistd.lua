@@ -42,10 +42,5 @@ else
 	print "Execution not within a terminal"
 end
 
-print "Sounding the alarm in 2 seconds"
-uni.alarm(2)
-
-print "Going to sleep for 3 seconds (unless interrupted by alarm)"
-uni.sleep(3)
-
-
+print "Listing store of the current directory by invoking ls program"
+uni.exec{ "ls", "-l" }
